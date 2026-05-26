@@ -6,6 +6,61 @@ import Sidebar from '../components/Sidebar';
 
 import API from '../services/api';
 
+const coordenadasLugares = {
+  Busan: {
+    latitud: 35.1796,
+    longitud: 129.0756
+  },
+  Cuenca: {
+    latitud: -2.9006,
+    longitud: -79.0045
+  },
+  Guayaquil: {
+    latitud: -2.1709,
+    longitud: -79.9224
+  },
+  Japon: {
+    latitud: 35.6762,
+    longitud: 139.6503
+  },
+  Japón: {
+    latitud: 35.6762,
+    longitud: 139.6503
+  },
+  Latacunga: {
+    latitud: -0.9333,
+    longitud: -78.6167
+  },
+  Manta: {
+    latitud: -0.9677,
+    longitud: -80.7089
+  },
+  Miami: {
+    latitud: 25.7617,
+    longitud: -80.1918
+  },
+  Panama: {
+    latitud: 8.9824,
+    longitud: -79.5199
+  },
+  Panamá: {
+    latitud: 8.9824,
+    longitud: -79.5199
+  },
+  Quito: {
+    latitud: -0.1807,
+    longitud: -78.4678
+  },
+  Shanghai: {
+    latitud: 31.2304,
+    longitud: 121.4737
+  },
+  Yokohama: {
+    latitud: 35.4437,
+    longitud: 139.6380
+  }
+};
+
 function OrdenCompleta() {
   const navigate = useNavigate();
 
@@ -16,6 +71,10 @@ function OrdenCompleta() {
 
   const esCliente =
     usuarioActual?.rol === 'CLIENTE';
+
+  const idUsuarioActual =
+    usuarioActual?.id_usuario ||
+    usuarioActual?.id;
 
   const [paso, setPaso] = useState(1);
 
@@ -45,6 +104,7 @@ function OrdenCompleta() {
 
   const [ordenCreada, setOrdenCreada] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [buscandoCoordenadas, setBuscandoCoordenadas] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -58,8 +118,8 @@ function OrdenCompleta() {
         setUsuarios(usuariosRes.data);
         setProductos(productosRes.data);
 
-        if (esCliente && usuarioActual?.id_usuario) {
-          setIdUsuario(String(usuarioActual.id_usuario));
+        if (esCliente && idUsuarioActual) {
+          setIdUsuario(String(idUsuarioActual));
         }
       } catch (error) {
         console.log(error);
@@ -68,7 +128,7 @@ function OrdenCompleta() {
     };
 
     obtenerDatos();
-  }, [esCliente, usuarioActual?.id_usuario]);
+  }, [esCliente, idUsuarioActual]);
 
   const usuarioSeleccionado = usuarios.find(
     (usuario) => Number(usuario.id_usuario) === Number(idUsuario)
@@ -226,11 +286,76 @@ function OrdenCompleta() {
     }
   };
 
+  const aplicarCoordenadas = (lugar) => {
+    const nombreLugar =
+      lugar?.trim();
+
+    if (!nombreLugar) {
+      setError('Escribe una ubicacion para buscar coordenadas');
+      return false;
+    }
+
+    const coordenadas =
+      coordenadasLugares[nombreLugar];
+
+    if (!coordenadas) {
+      return false;
+    }
+
+    setLatitud(String(coordenadas.latitud));
+    setLongitud(String(coordenadas.longitud));
+    setError('');
+
+    return true;
+  };
+
+  const buscarCoordenadas = async () => {
+    const lugar =
+      ubicacion ||
+      origen ||
+      destino;
+
+    if (aplicarCoordenadas(lugar)) {
+      return;
+    }
+
+    if (!lugar?.trim()) {
+      setError('Escribe una ubicacion para buscar coordenadas');
+      return;
+    }
+
+    try {
+      setBuscandoCoordenadas(true);
+      setError('');
+
+      const res =
+        await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(lugar)}`
+        );
+
+      const data =
+        await res.json();
+
+      if (!data || data.length === 0) {
+        setError('No se encontraron coordenadas para esa ubicacion');
+        return;
+      }
+
+      setLatitud(String(Number(data[0].lat).toFixed(6)));
+      setLongitud(String(Number(data[0].lon).toFixed(6)));
+    } catch (error) {
+      console.log(error);
+      setError('No se pudo buscar coordenadas automaticamente');
+    } finally {
+      setBuscandoCoordenadas(false);
+    }
+  };
+
   const limpiarTodo = () => {
     setPaso(1);
     setIdUsuario(
-      esCliente && usuarioActual?.id_usuario
-        ? String(usuarioActual.id_usuario)
+      esCliente && idUsuarioActual
+        ? String(idUsuarioActual)
         : ''
     );
     setEstadoOrden('Pendiente');
@@ -310,7 +435,18 @@ function OrdenCompleta() {
                     {esCliente ? 'Usuario actual' : 'Seleccionar usuario'}
                   </option>
 
-                  {usuarios.map((usuario) => (
+                  {esCliente && idUsuarioActual && (
+                    <option value={idUsuarioActual}>
+                      {usuarioActual?.nombre} - {usuarioActual?.rol}
+                    </option>
+                  )}
+
+                  {usuarios
+                    .filter((usuario) =>
+                      !esCliente ||
+                      Number(usuario.id_usuario) !== Number(idUsuarioActual)
+                    )
+                    .map((usuario) => (
                     <option
                       key={usuario.id_usuario}
                       value={usuario.id_usuario}
@@ -486,7 +622,14 @@ function OrdenCompleta() {
                   type="text"
                   placeholder="Origen"
                   value={origen}
-                  onChange={(e) => setOrigen(e.target.value)}
+                  onChange={(e) => {
+                    setOrigen(e.target.value);
+
+                    if (!ubicacion) {
+                      setUbicacion(e.target.value);
+                      aplicarCoordenadas(e.target.value);
+                    }
+                  }}
                   className={inputStyle}
                 />
 
@@ -524,7 +667,10 @@ function OrdenCompleta() {
                   type="text"
                   placeholder="Ubicacion actual"
                   value={ubicacion}
-                  onChange={(e) => setUbicacion(e.target.value)}
+                  onChange={(e) => {
+                    setUbicacion(e.target.value);
+                    aplicarCoordenadas(e.target.value);
+                  }}
                   className={inputStyle}
                 />
 
@@ -543,6 +689,41 @@ function OrdenCompleta() {
                   onChange={(e) => setLongitud(e.target.value)}
                   className={inputStyle}
                 />
+              </div>
+
+              <div className="flex flex-wrap gap-3 mt-5">
+                <button
+                  type="button"
+                  onClick={buscarCoordenadas}
+                  disabled={buscandoCoordenadas}
+                  className="bg-slate-800 hover:bg-slate-900 disabled:bg-slate-400 text-white px-6 py-3 rounded-xl font-bold"
+                >
+                  {buscandoCoordenadas
+                    ? 'Buscando...'
+                    : 'Buscar coordenadas'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUbicacion(origen);
+                    aplicarCoordenadas(origen);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold"
+                >
+                  Usar origen
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUbicacion(destino);
+                    aplicarCoordenadas(destino);
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold"
+                >
+                  Usar destino
+                </button>
               </div>
             </section>
           )}

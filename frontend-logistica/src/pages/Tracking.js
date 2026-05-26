@@ -47,23 +47,32 @@ const coordenadasCiudades = {
 };
 
 function Tracking() {
+  const usuarioActual = JSON.parse(localStorage.getItem('usuario')) || {};
+  const idUsuarioActual = Number(usuarioActual?.id_usuario || usuarioActual?.id);
+  const esCliente = usuarioActual?.rol === 'CLIENTE';
+
   const [tracking, setTracking] = useState([]);
+  const [ordenes, setOrdenes] = useState([]);
 
-  const obtenerTracking = async () => {
+  const obtenerDatos = async () => {
     try {
-      const res = await API.get('/tracking');
+      const [trackingRes, ordenesRes] = await Promise.all([
+        API.get('/tracking'),
+        API.get('/ordenes')
+      ]);
 
-      setTracking(res.data);
+      setTracking(trackingRes.data);
+      setOrdenes(ordenesRes.data);
     } catch (error) {
       console.log(error);
     }
   };
 
   useEffect(() => {
-    obtenerTracking();
+    obtenerDatos();
 
-    socket.on('nuevo-tracking', (nuevo) => {
-      setTracking((prev) => [nuevo, ...prev]);
+    socket.on('nuevo-tracking', () => {
+      obtenerDatos();
     });
 
     return () => {
@@ -71,9 +80,23 @@ function Tracking() {
     };
   }, []);
 
+  const trackingVisible = useMemo(() => {
+    if (!esCliente) return tracking;
+
+    const ordenesDelCliente = new Set(
+      ordenes
+        .filter((orden) => obtenerIdUsuarioOrden(orden) === idUsuarioActual)
+        .map((orden) => Number(orden.id_orden))
+    );
+
+    return tracking.filter((item) =>
+      ordenesDelCliente.has(Number(item.id_orden))
+    );
+  }, [tracking, ordenes, esCliente, idUsuarioActual]);
+
   const trackingAnalizado = useMemo(() => {
-    return tracking.map((item) => analizarTracking(item));
-  }, [tracking]);
+    return trackingVisible.map((item) => analizarTracking(item));
+  }, [trackingVisible]);
 
   const centroMapa = obtenerCentroMapa(trackingAnalizado);
 
@@ -112,7 +135,7 @@ function Tracking() {
           </div>
 
           <div className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-semibold shadow-lg whitespace-nowrap">
-            Total: {tracking.length}
+            Total: {trackingAnalizado.length}
           </div>
         </div>
 
@@ -255,11 +278,22 @@ function Tracking() {
 
         {trackingAnalizado.length === 0 && (
           <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-500">
-            No hay registros de tracking disponibles.
+            {esCliente
+              ? 'No tienes rutas de tracking disponibles para tus ordenes.'
+              : 'No hay registros de tracking disponibles.'}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function obtenerIdUsuarioOrden(orden) {
+  return Number(
+    orden?.id_usuario ||
+      orden?.usuario?.id_usuario ||
+      orden?.usuario?.id ||
+      0
   );
 }
 
