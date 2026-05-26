@@ -1,0 +1,691 @@
+import {
+  useEffect,
+  useState
+} from 'react';
+
+import Sidebar from '../components/Sidebar';
+
+import API from '../services/api';
+
+import {
+  Bar,
+  Pie,
+  Line
+} from 'react-chartjs-2';
+
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+function Dashboard() {
+
+  const usuario =
+    JSON.parse(
+      localStorage.getItem('usuario')
+    );
+
+  const rol =
+    usuario?.rol;
+
+  const esAdmin =
+    rol === 'ADMIN';
+
+  const esOperador =
+    rol === 'OPERADOR';
+
+  const esCliente =
+    rol === 'CLIENTE';
+
+  const puedeVerGestion =
+    esAdmin || esOperador;
+
+  const [datos, setDatos] =
+    useState({
+
+      usuarios: 0,
+      productos: 0,
+      ordenes: 0,
+      embarques: 0,
+
+      ia: {
+        alto: 0,
+        medio: 0,
+        bajo: 0
+      },
+
+      alertas:
+        'Sistema estable'
+
+    });
+
+  const obtenerResumen =
+    async () => {
+
+      try {
+
+        const res =
+          await API.get('/dashboard');
+
+        setDatos(res.data);
+
+      } catch (error) {
+
+        console.log(error);
+
+      }
+
+    };
+
+  useEffect(() => {
+
+    obtenerResumen();
+
+    const interval =
+      setInterval(() => {
+
+        obtenerResumen();
+
+      }, 5000);
+
+    return () =>
+      clearInterval(interval);
+
+  }, []);
+
+  const barData = {
+
+    labels: [
+      'Usuarios',
+      'Productos',
+      'Órdenes',
+      'Embarques'
+    ],
+
+    datasets: [
+
+      {
+        label: 'Totales',
+
+        data: [
+          datos.usuarios,
+          datos.productos,
+          datos.ordenes,
+          datos.embarques
+        ],
+
+        backgroundColor: [
+          '#2563eb',
+          '#16a34a',
+          '#ea580c',
+          '#9333ea'
+        ],
+
+        borderRadius: 12
+      }
+
+    ]
+
+  };
+
+  const pieData = {
+
+    labels: [
+      'Usuarios',
+      'Productos',
+      'Órdenes',
+      'Embarques'
+    ],
+
+    datasets: [
+
+      {
+        data: [
+          datos.usuarios,
+          datos.productos,
+          datos.ordenes,
+          datos.embarques
+        ],
+
+        backgroundColor: [
+          '#2563eb',
+          '#16a34a',
+          '#ea580c',
+          '#9333ea'
+        ]
+      }
+
+    ]
+
+  };
+
+  const iaPieData = {
+
+    labels: [
+      'Riesgo Alto',
+      'Riesgo Medio',
+      'Riesgo Bajo'
+    ],
+
+    datasets: [
+
+      {
+        data: [
+          datos.ia?.alto || 0,
+          datos.ia?.medio || 0,
+          datos.ia?.bajo || 0
+        ],
+
+        backgroundColor: [
+          '#dc2626',
+          '#f97316',
+          '#16a34a'
+        ]
+      }
+
+    ]
+
+  };
+
+  const lineData = {
+
+    labels: [
+      'Usuarios',
+      'Productos',
+      'Órdenes',
+      'Embarques'
+    ],
+
+    datasets: [
+
+      {
+        label: 'Crecimiento Sistema',
+
+        data: [
+          datos.usuarios,
+          datos.productos,
+          datos.ordenes,
+          datos.embarques
+        ],
+
+        borderColor: '#2563eb',
+
+        backgroundColor: '#93c5fd',
+
+        tension: 0.4,
+
+        fill: true
+      }
+
+    ]
+
+  };
+
+  return (
+
+    <div className="flex bg-slate-100 min-h-screen">
+
+      <Sidebar />
+
+      <div className="flex-1 p-8">
+
+        {/* HEADER */}
+
+        <div className="flex justify-between items-center">
+
+          <div>
+
+            <h1 className="text-4xl font-bold text-slate-800">
+
+              Dashboard Inteligente
+
+            </h1>
+
+            <div className="mt-4">
+
+              <p className="text-gray-500">
+
+                Bienvenido nuevamente
+
+              </p>
+
+              <div className="flex items-center gap-4 mt-3">
+
+                <div
+                  className="
+                    w-14
+                    h-14
+                    bg-blue-600
+                    rounded-full
+                    flex
+                    items-center
+                    justify-center
+                    text-white
+                    font-bold
+                    text-2xl
+                    shadow-lg
+                  "
+                >
+
+                  {
+                    usuario?.nombre
+                      ?.charAt(0)
+                      ?.toUpperCase()
+                  }
+
+                </div>
+
+                <div>
+
+                  <h2 className="text-xl font-bold text-slate-800">
+
+                    {usuario?.nombre}
+
+                  </h2>
+
+                  <p className="text-gray-500">
+
+                    {usuario?.email}
+
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          <div
+            className="
+              bg-green-100
+              text-green-700
+              px-6
+              py-4
+              rounded-2xl
+              font-bold
+              shadow-lg
+              text-center
+            "
+          >
+
+            <p>Sistema Online</p>
+
+            <p className="text-sm mt-1">
+
+              {rol || 'OPERADOR'}
+
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* ALERTAS */}
+
+        <div
+          className="
+            mt-8
+            p-5
+            rounded-2xl
+            shadow-lg
+            bg-white
+            border-l-8
+            border-red-500
+          "
+        >
+
+          <h2 className="text-xl font-bold text-red-600">
+
+            Alertas IA
+
+          </h2>
+
+          <p className="text-gray-600 mt-2">
+
+            {datos.alertas}
+
+          </p>
+
+        </div>
+
+        {/* VISTA CLIENTE */}
+
+        {
+          esCliente && (
+
+            <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <ClienteCard
+                titulo="Tracking disponible"
+                descripcion="Consulta el estado de tus embarques en tiempo real."
+                boton="Ir a Tracking"
+                ruta="/tracking"
+              />
+
+              <ClienteCard
+                titulo="IA Predictiva"
+                descripcion="El sistema analiza riesgos logísticos automáticamente."
+                boton="Ver seguimiento"
+                ruta="/tracking"
+              />
+
+            </div>
+
+          )
+        }
+
+        {/* VISTA ADMIN / OPERADOR */}
+
+        {
+          puedeVerGestion && (
+
+            <>
+
+              {/* KPIs */}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-10">
+
+                <Card
+                  titulo="Usuarios"
+                  valor={datos.usuarios}
+                  color="text-blue-600"
+                />
+
+                <Card
+                  titulo="Productos"
+                  valor={datos.productos}
+                  color="text-green-600"
+                />
+
+                <Card
+                  titulo="Órdenes"
+                  valor={datos.ordenes}
+                  color="text-orange-500"
+                />
+
+                <Card
+                  titulo="Embarques"
+                  valor={datos.embarques}
+                  color="text-purple-600"
+                />
+
+              </div>
+
+              {/* IA KPIs */}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+
+                <Card
+                  titulo="IA Riesgo Alto"
+                  valor={datos.ia?.alto || 0}
+                  color="text-red-600"
+                />
+
+                <Card
+                  titulo="IA Riesgo Medio"
+                  valor={datos.ia?.medio || 0}
+                  color="text-orange-500"
+                />
+
+                <Card
+                  titulo="IA Riesgo Bajo"
+                  valor={datos.ia?.bajo || 0}
+                  color="text-green-600"
+                />
+
+              </div>
+
+              {/* GRAFICAS */}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+
+                <div className="bg-white p-6 rounded-2xl shadow-lg">
+
+                  <h2 className="text-2xl font-bold mb-6">
+
+                    Estadísticas Generales
+
+                  </h2>
+
+                  <Bar data={barData} />
+
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl shadow-lg">
+
+                  <h2 className="text-2xl font-bold mb-6">
+
+                    Distribución Sistema
+
+                  </h2>
+
+                  <Pie data={pieData} />
+
+                </div>
+
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl shadow-lg mt-10">
+
+                <h2 className="text-2xl font-bold mb-6">
+
+                  IA Predictiva Logística
+
+                </h2>
+
+                <div className="max-w-md mx-auto">
+
+                  <Pie data={iaPieData} />
+
+                </div>
+
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl shadow-lg mt-10">
+
+                <h2 className="text-2xl font-bold mb-6">
+
+                  Tendencia del Sistema
+
+                </h2>
+
+                <Line data={lineData} />
+
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+
+                <LiveCard
+                  titulo="Tracking Live"
+                  valor="Activo"
+                  color="bg-green-600"
+                />
+
+                <LiveCard
+                  titulo="Socket.IO"
+                  valor="Conectado"
+                  color="bg-blue-600"
+                />
+
+                <LiveCard
+                  titulo="IA Predictiva"
+                  valor="Operativa"
+                  color="bg-purple-600"
+                />
+
+              </div>
+
+            </>
+
+          )
+        }
+
+      </div>
+
+    </div>
+
+  );
+
+}
+
+function Card({
+  titulo,
+  valor,
+  color
+}) {
+
+  return (
+
+    <div
+      className="
+        bg-white
+        p-6
+        rounded-2xl
+        shadow-lg
+        hover:shadow-2xl
+        transition
+      "
+    >
+
+      <h2 className="text-gray-500">
+
+        {titulo}
+
+      </h2>
+
+      <p
+        className={`
+          text-5xl
+          font-bold
+          mt-3
+          ${color}
+        `}
+      >
+
+        {valor}
+
+      </p>
+
+    </div>
+
+  );
+
+}
+
+function LiveCard({
+  titulo,
+  valor,
+  color
+}) {
+
+  return (
+
+    <div
+      className={`
+        ${color}
+        text-white
+        p-6
+        rounded-2xl
+        shadow-lg
+      `}
+    >
+
+      <h2 className="text-xl font-bold">
+
+        {titulo}
+
+      </h2>
+
+      <p className="mt-4 text-3xl font-bold">
+
+        {valor}
+
+      </p>
+
+    </div>
+
+  );
+
+}
+
+function ClienteCard({
+  titulo,
+  descripcion,
+  boton,
+  ruta
+}) {
+
+  return (
+
+    <div
+      className="
+        bg-white
+        p-8
+        rounded-2xl
+        shadow-lg
+        border-l-8
+        border-blue-600
+      "
+    >
+
+      <h2 className="text-2xl font-bold text-slate-800">
+
+        {titulo}
+
+      </h2>
+
+      <p className="text-gray-500 mt-3">
+
+        {descripcion}
+
+      </p>
+
+      <a
+        href={ruta}
+        className="
+          inline-block
+          mt-6
+          bg-blue-600
+          hover:bg-blue-700
+          text-white
+          px-6
+          py-3
+          rounded-xl
+          font-bold
+          transition
+        "
+      >
+
+        {boton}
+
+      </a>
+
+    </div>
+
+  );
+
+}
+
+export default Dashboard;
