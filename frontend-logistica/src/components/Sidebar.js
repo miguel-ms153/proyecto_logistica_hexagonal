@@ -282,6 +282,13 @@ function Sidebar() {
             )
           }
 
+          {/* TODOS LOS ROLES */}
+          <MenuItem
+            to="/orden-completa"
+            icon={<FaClipboardList />}
+            text="Nueva Orden"
+          />
+
           {/* SOLO ADMIN */}
           {
             rol === 'ADMIN' && (

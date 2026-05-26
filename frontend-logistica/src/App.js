@@ -14,6 +14,8 @@ import Productos from './pages/Productos';
 
 import Ordenes from './pages/Ordenes';
 
+import OrdenCompleta from './pages/OrdenCompleta';
+
 import Embarques from './pages/Embarques';
 
 import Proveedores from './pages/Proveedores';
@@ -23,9 +25,6 @@ import Pagos from './pages/Pagos';
 import Tracking from './pages/Tracking';
 
 import ProtectedRoute from './routes/ProtectedRoute';
-
-import RoleRoute
-from './routes/RoleRoute';
 
 function App() {
 
@@ -77,6 +76,16 @@ function App() {
           element={
             <ProtectedRoute>
               <Ordenes />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ORDEN COMPLETA */}
+        <Route
+          path="/orden-completa"
+          element={
+            <ProtectedRoute>
+              <OrdenCompleta />
             </ProtectedRoute>
           }
         />
