@@ -1,3 +1,5 @@
+const { Op } = require('sequelize');
+
 const Usuario =
 require('../models/UsuarioModel');
 
@@ -10,6 +12,9 @@ require('../models/OrdenModel');
 const Embarque =
 require('../models/EmbarqueModel');
 
+const Pago =
+require('../models/PagoModel');
+
 const Tracking =
 require('../models/TrackingModel');
 
@@ -20,91 +25,160 @@ class DashboardController {
 
   async resumen(req, res) {
 
-  try {
+    try {
 
-    const usuarios =
-      await Usuario.count();
+      const usuarios =
+        await Usuario.count();
 
-    const productos =
-      await Producto.count();
+      const productos =
+        await Producto.count();
 
-    const ordenes =
-      await Orden.count();
+      const ordenes =
+        await Orden.count();
 
-    const embarques =
-      await Embarque.count();
+      const embarques =
+        await Embarque.count();
 
-    const tracking =
-      await Tracking.find();
+      const productosStockBajo =
+        await Producto.count({
+          where: {
+            stock: {
+              [Op.lt]: 10
+            }
+          }
+        });
 
-    let riesgoAlto = 0;
-    let riesgoMedio = 0;
-    let riesgoBajo = 0;
+      const ordenesCompletas =
+        await Orden.findAll({
+          include: [
+            {
+              model: Pago,
+              as: 'pagos',
+              required: false
+            },
+            {
+              model: Embarque,
+              as: 'embarques',
+              required: false
+            }
+          ]
+        });
 
-    tracking.forEach((t) => {
+      const ordenesSinPago =
+        ordenesCompletas.filter((orden) =>
+          !orden.pagos ||
+          orden.pagos.length === 0
+        ).length;
 
-      const ia =
-        predecirRiesgo(t);
+      const ordenesSinEmbarque =
+        ordenesCompletas.filter((orden) =>
+          !orden.embarques ||
+          orden.embarques.length === 0
+        ).length;
 
-      if (
-        ia.riesgo === 'ALTO'
-      ) {
+      const embarquesRetrasados =
+        await Embarque.count({
+          where: {
+            estado: 'Retrasado'
+          }
+        });
 
-        riesgoAlto++;
+      const tracking =
+        await Tracking.find();
 
-      }
+      let riesgoAlto = 0;
+      let riesgoMedio = 0;
+      let riesgoBajo = 0;
 
-      else if (
-        ia.riesgo === 'MEDIO'
-      ) {
+      tracking.forEach((t) => {
 
-        riesgoMedio++;
+        const ia =
+          predecirRiesgo(t);
 
-      }
+        if (
+          ia.riesgo === 'ALTO'
+        ) {
 
-      else {
+          riesgoAlto++;
 
-        riesgoBajo++;
+        }
 
-      }
+        else if (
+          ia.riesgo === 'MEDIO'
+        ) {
 
-    });
+          riesgoMedio++;
 
-    res.json({
+        }
 
-      usuarios,
-      productos,
-      ordenes,
-      embarques,
+        else {
 
-      ia: {
+          riesgoBajo++;
 
-        alto:
-          riesgoAlto,
+        }
 
-        medio:
-          riesgoMedio,
+      });
 
-        bajo:
-          riesgoBajo
+      const alertasDetalle = {
 
-      },
+        stockBajo:
+          productosStockBajo,
 
-      alertas:
+        ordenesSinPago,
 
-        riesgoAlto > 3
-          ? 'ALERTA CRÍTICA'
-          : 'Sistema estable'
+        ordenesSinEmbarque,
 
-    });
+        embarquesRetrasados
 
-  } catch (error) {
+      };
 
-    res.status(500).json({
-      error: error.message
-    });
+      const totalAlertas =
+        productosStockBajo +
+        ordenesSinPago +
+        ordenesSinEmbarque +
+        embarquesRetrasados +
+        riesgoAlto;
 
-  }
+      const alertasTexto =
+        totalAlertas > 0
+          ? `${totalAlertas} alertas requieren revision`
+          : 'Sistema estable';
+
+      res.json({
+
+        usuarios,
+        productos,
+        ordenes,
+        embarques,
+
+        ia: {
+
+          alto:
+            riesgoAlto,
+
+          medio:
+            riesgoMedio,
+
+          bajo:
+            riesgoBajo
+
+        },
+
+        alertas:
+          alertasTexto,
+
+        alertasDetalle
+
+      });
+
+    } catch (error) {
+
+      res.status(500).json({
+        error: error.message
+      });
+
+    }
+
   }
 
 }

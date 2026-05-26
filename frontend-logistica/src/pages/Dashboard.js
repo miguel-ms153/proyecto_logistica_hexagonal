@@ -72,7 +72,14 @@ function Dashboard() {
       },
 
       alertas:
-        'Sistema estable'
+        'Sistema estable',
+
+      alertasDetalle: {
+        stockBajo: 0,
+        ordenesSinPago: 0,
+        ordenesSinEmbarque: 0,
+        embarquesRetrasados: 0
+      }
     });
 
   const [trackingStatus, setTrackingStatus] =
@@ -291,6 +298,37 @@ function Dashboard() {
     ]
   };
 
+  const alertasOperativas = [
+    {
+      titulo: 'Stock bajo',
+      valor: datos.alertasDetalle?.stockBajo || 0,
+      descripcion: 'Productos con menos de 10 unidades',
+      color: 'border-red-500',
+      texto: 'text-red-600'
+    },
+    {
+      titulo: 'Ordenes sin pago',
+      valor: datos.alertasDetalle?.ordenesSinPago || 0,
+      descripcion: 'Ordenes que aun no tienen pagos registrados',
+      color: 'border-orange-500',
+      texto: 'text-orange-600'
+    },
+    {
+      titulo: 'Ordenes sin embarque',
+      valor: datos.alertasDetalle?.ordenesSinEmbarque || 0,
+      descripcion: 'Ordenes que aun no tienen embarque asignado',
+      color: 'border-blue-500',
+      texto: 'text-blue-600'
+    },
+    {
+      titulo: 'Embarques retrasados',
+      valor: datos.alertasDetalle?.embarquesRetrasados || 0,
+      descripcion: 'Embarques marcados como retrasados',
+      color: 'border-purple-500',
+      texto: 'text-purple-600'
+    }
+  ];
+
   return (
     <div className="flex bg-slate-100 min-h-screen">
       <Sidebar />
@@ -374,13 +412,30 @@ function Dashboard() {
             border-red-500
           "
         >
-          <h2 className="text-xl font-bold text-red-600">
-            Alertas IA
-          </h2>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-red-600">
+                Alertas operativas
+              </h2>
 
-          <p className="text-gray-600 mt-2">
-            {datos.alertas}
-          </p>
+              <p className="text-gray-600 mt-2">
+                {datos.alertas}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5">
+            {alertasOperativas.map((alerta) => (
+              <AlertaCard
+                key={alerta.titulo}
+                titulo={alerta.titulo}
+                valor={alerta.valor}
+                descripcion={alerta.descripcion}
+                color={alerta.color}
+                texto={alerta.texto}
+              />
+            ))}
+          </div>
         </div>
 
         {esCliente && (
@@ -529,6 +584,48 @@ function obtenerColorIA(status) {
   if (status === 'Sin datos') return 'bg-yellow-500';
 
   return 'bg-red-600';
+}
+
+function AlertaCard({
+  titulo,
+  valor,
+  descripcion,
+  color,
+  texto
+}) {
+  return (
+    <div
+      className={`
+        bg-slate-50
+        border-l-4
+        ${color}
+        rounded-xl
+        p-4
+      `}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-bold text-slate-800">
+            {titulo}
+          </h3>
+
+          <p className="text-sm text-gray-500 mt-1">
+            {descripcion}
+          </p>
+        </div>
+
+        <span
+          className={`
+            ${texto}
+            text-3xl
+            font-bold
+          `}
+        >
+          {valor}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function Card({
