@@ -1,11 +1,21 @@
+const bcrypt = require('bcryptjs');
+
 class EditarUsuario {
 
   constructor(repository) {
     this.repository = repository;
   }
 
-  async ejecutar(data) {
-    return await this.repository.editar(data);
+  async ejecutar(id, data) {
+    if (data.password) {
+      data.password =
+        await bcrypt.hash(
+          data.password,
+          10
+        );
+    }
+
+    return await this.repository.editar(id, data);
   }
 
 }
