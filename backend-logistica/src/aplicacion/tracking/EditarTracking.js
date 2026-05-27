@@ -5,7 +5,7 @@ class EditarTracking {
   }
 
   async ejecutar(data) {
-    return await this.repository.crear(data);
+    return await this.repository.editar(data);
   }
 
 }
