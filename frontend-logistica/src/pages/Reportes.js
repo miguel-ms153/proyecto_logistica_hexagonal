@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import DataTable from 'react-data-table-component';
-
-import Sidebar from '../components/Sidebar';
-
 import API from '../services/api';
 
-import { exportarExcel } from '../utils/exportExcel';
-import { exportarPDF } from '../utils/exportPDF';
+import AlertMessage from '../components/common/AlertMessage';
+import DataTableCard from '../components/common/DataTableCard';
+import ExportButtons from '../components/common/ExportButtons';
+import KpiGrid from '../components/common/KpiGrid';
+import PageHeader from '../components/common/PageHeader';
+import PageLayout from '../components/common/PageLayout';
+import SectionCard from '../components/common/SectionCard';
+import StatusBadge from '../components/common/StatusBadge';
 
 import {
   calcularScoreRiesgo,
@@ -178,6 +180,20 @@ function Reportes() {
           )
         : 0;
 
+    const datosExportacion = resumenExportable.map((item) => ({
+      Orden: `#${item.orden}`,
+      Usuario: item.usuario,
+      Estado: item.estado,
+      Fecha: item.fecha,
+      Pagos: item.pagos,
+      Valor_pagado: `$${Number(item.valor_pagado || 0).toFixed(2)}`,
+      Embarques: item.embarques,
+      Aduanas: item.aduanas,
+      Documentos: item.documentos,
+      Riesgo_IA: `${item.riesgo} - ${item.score}/100`,
+      Recomendacion: resumirTexto(item.recomendacion_ia)
+    }));
+
     return {
       ordenesFiltradas,
       pagosFiltrados,
@@ -195,6 +211,7 @@ function Reportes() {
       estadosOrden,
       estadosDocumentos,
       resumenExportable,
+      datosExportacion,
       scorePromedio
     };
   }, [ordenes, pagos, embarques, aduanas, documentos, productos, desde, hasta]);
@@ -202,35 +219,38 @@ function Reportes() {
   const columns = [
     {
       name: 'Orden',
-      width: '95px',
+      width: '82px',
       selector: (row) => `#${row.orden}`,
       sortable: true
     },
     {
       name: 'Usuario',
-      width: '145px',
+      minWidth: '180px',
+      grow: 2,
       selector: (row) => row.usuario,
       sortable: true,
       cell: (row) => (
-        <span className="truncate block max-w-[120px]" title={row.usuario}>
-          {row.usuario}
-        </span>
+        <div className="min-w-0">
+          <p className="font-bold text-slate-800 truncate" title={row.usuario}>
+            {row.usuario}
+          </p>
+
+          <p className="text-xs text-slate-500">
+            Orden #{row.orden}
+          </p>
+        </div>
       )
     },
     {
       name: 'Estado',
-      width: '125px',
+      width: '130px',
       selector: (row) => row.estado,
       sortable: true,
-      cell: (row) => (
-        <span className="truncate block max-w-[105px]" title={row.estado}>
-          {row.estado}
-        </span>
-      )
+      cell: (row) => <EstadoOrdenBadge estado={row.estado} />
     },
     {
       name: 'Fecha',
-      width: '115px',
+      width: '110px',
       selector: (row) => row.fecha,
       sortable: true,
       cell: (row) => (
@@ -240,8 +260,8 @@ function Reportes() {
       )
     },
     {
-      name: 'Valor pagado',
-      width: '130px',
+      name: 'Pagado',
+      width: '120px',
       cell: (row) => (
         <span className="font-bold text-green-600">
           ${Number(row.valor_pagado || 0).toFixed(2)}
@@ -264,8 +284,8 @@ function Reportes() {
       selector: (row) => row.documentos
     },
     {
-      name: 'Riesgo',
-      width: '120px',
+      name: 'Riesgo IA',
+      width: '125px',
       cell: (row) => <RiesgoBadge nivel={row.riesgo} score={row.score} />,
       center: true
     }
@@ -286,141 +306,155 @@ function Reportes() {
         minHeight: '54px',
         fontSize: '13px'
       }
+    },
+    cells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
+      }
+    },
+    headCells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
+      }
     }
   };
 
   return (
-    <div className="flex bg-slate-100 min-h-screen">
-      <Sidebar />
+    <PageLayout>
+      <PageHeader
+        title="Reportes Gerenciales"
+        subtitle="Analitica ejecutiva para comercio exterior, pagos, aduana, documentos e IA"
+        badge={`Ordenes: ${reporte.ordenesFiltradas.length}`}
+      />
 
-      <div className="flex-1 p-4 md:p-5 xl:p-6 overflow-x-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-              Reportes Gerenciales
-            </h1>
+      <AlertMessage message={error} />
 
-            <p className="text-sm md:text-base text-gray-500 mt-1">
-              Analitica por fechas para comercio exterior, pagos, aduana y documentos
-            </p>
-          </div>
+      <SectionCard
+        title="Filtros de reporte"
+        subtitle="Define un rango de fechas para analizar el desempeno operativo"
+        className="!mb-5"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CampoFormulario label="Desde">
+            <input
+              type="date"
+              value={desde}
+              onChange={(e) => setDesde(e.target.value)}
+              className={inputStyle}
+            />
+          </CampoFormulario>
 
-          <div className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold shadow w-fit text-sm">
-            Ordenes: {reporte.ordenesFiltradas.length}
-          </div>
-        </div>
+          <CampoFormulario label="Hasta">
+            <input
+              type="date"
+              value={hasta}
+              onChange={(e) => setHasta(e.target.value)}
+              className={inputStyle}
+            />
+          </CampoFormulario>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 px-4 py-3 rounded-xl font-bold mb-6">
-            {error}
-          </div>
-        )}
-
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <CampoFormulario label="Desde">
-              <input
-                type="date"
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-                className={inputStyle}
-              />
-            </CampoFormulario>
-
-            <CampoFormulario label="Hasta">
-              <input
-                type="date"
-                value={hasta}
-                onChange={(e) => setHasta(e.target.value)}
-                className={inputStyle}
-              />
-            </CampoFormulario>
-
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setDesde('');
-                  setHasta('');
-                }}
-                className="bg-slate-700 hover:bg-slate-800 text-white px-4 py-3 rounded-lg font-bold w-full text-sm"
-              >
-                Limpiar filtros
-              </button>
-            </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setDesde('');
+                setHasta('');
+              }}
+              className="bg-slate-700 hover:bg-slate-800 text-white px-4 py-3 rounded-lg font-bold w-full text-sm"
+            >
+              Limpiar filtros
+            </button>
           </div>
         </div>
+      </SectionCard>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
-          <KPI titulo="Valor pagado" valor={`$${reporte.valorPagado.toFixed(2)}`} color="bg-green-600" />
-          <KPI titulo="Pagos pendientes" valor={reporte.pagosPendientes} color="bg-yellow-500" />
-          <KPI titulo="Embarques retrasados" valor={reporte.embarquesRetrasados} color="bg-red-600" />
-          <KPI titulo="Score promedio IA" valor={`${reporte.scorePromedio}/100`} color={obtenerColorRiesgoScore(reporte.scorePromedio)} />
-        </div>
+      <KpiGrid
+        items={[
+          {
+            title: 'Valor pagado',
+            value: `$${reporte.valorPagado.toFixed(2)}`,
+            color: 'bg-green-600'
+          },
+          {
+            title: 'Pagos pendientes',
+            value: reporte.pagosPendientes,
+            color: 'bg-yellow-500'
+          },
+          {
+            title: 'Embarques retrasados',
+            value: reporte.embarquesRetrasados,
+            color: 'bg-red-600'
+          },
+          {
+            title: 'Score promedio IA',
+            value: `${reporte.scorePromedio}/100`,
+            color: obtenerColorRiesgoScore(reporte.scorePromedio)
+          }
+        ]}
+      />
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-          <KPI titulo="Aduanas observadas" valor={reporte.aduanasObservadas} color="bg-purple-600" />
-          <KPI titulo="Docs pendientes" valor={reporte.documentosPendientes} color="bg-blue-600" />
-          <KPI titulo="Docs vencidos" valor={reporte.documentosVencidos} color="bg-slate-800" />
-        </div>
+      <KpiGrid
+        columns="md:grid-cols-3"
+        items={[
+          {
+            title: 'Aduanas observadas',
+            value: reporte.aduanasObservadas,
+            color: 'bg-purple-600'
+          },
+          {
+            title: 'Docs pendientes',
+            value: reporte.documentosPendientes,
+            color: 'bg-blue-600'
+          },
+          {
+            title: 'Docs vencidos',
+            value: reporte.documentosVencidos,
+            color: 'bg-slate-800'
+          }
+        ]}
+      />
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
-          <RankingCard
-            titulo="Clientes con mas ordenes"
-            items={reporte.clientesRanking}
-            empty="Sin datos de clientes"
-          />
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
+        <RankingCard
+          titulo="Clientes con mas ordenes"
+          items={reporte.clientesRanking}
+          empty="Sin datos de clientes"
+        />
 
-          <RankingCard
-            titulo="Productos mas solicitados"
-            items={reporte.productosRanking}
-            empty="Sin datos de productos"
-          />
+        <RankingCard
+          titulo="Productos mas solicitados"
+          items={reporte.productosRanking}
+          empty="Sin datos de productos"
+        />
 
-          <DistribucionCard
-            titulo="Estados de ordenes"
-            items={reporte.estadosOrden}
-          />
+        <DistribucionCard
+          titulo="Estados de ordenes"
+          items={reporte.estadosOrden}
+        />
 
-          <DistribucionCard
-            titulo="Estados documentales"
-            items={reporte.estadosDocumentos}
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-3 mb-5">
-          <button
-            type="button"
-            onClick={() => exportarExcel(reporte.resumenExportable, 'reporte_gerencial')}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm"
-          >
-            Exportar Excel
-          </button>
-
-          <button
-            type="button"
-            onClick={() => exportarPDF(reporte.resumenExportable, 'reporte_gerencial')}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm"
-          >
-            Exportar PDF
-          </button>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-3">
-          <DataTable
-            columns={columns}
-            data={reporte.resumenExportable}
-            pagination
-            responsive
-            striped
-            highlightOnHover
-            fixedHeader
-            fixedHeaderScrollHeight="520px"
-            customStyles={customStyles}
-          />
-        </div>
+        <DistribucionCard
+          titulo="Estados documentales"
+          items={reporte.estadosDocumentos}
+        />
       </div>
-    </div>
+
+      <ExportButtons
+        data={reporte.datosExportacion}
+        fileName="reporte_gerencial"
+      />
+
+      <DataTableCard
+        columns={columns}
+        data={reporte.resumenExportable}
+        noData="No hay datos para el reporte seleccionado"
+        fixedHeaderScrollHeight="520px"
+        selectableRows={false}
+        dense
+        customStyles={customStyles}
+      />
+    </PageLayout>
   );
 }
 
@@ -433,15 +467,6 @@ function CampoFormulario({ label, children }) {
 
       {children}
     </label>
-  );
-}
-
-function KPI({ titulo, valor, color }) {
-  return (
-    <div className={`${color} text-white p-4 rounded-xl shadow-md min-h-[108px]`}>
-      <p className="text-sm font-medium leading-tight">{titulo}</p>
-      <h2 className="text-2xl md:text-3xl font-bold mt-2 break-words leading-tight">{valor}</h2>
-    </div>
   );
 }
 
@@ -607,14 +632,38 @@ function formatearFecha(fecha) {
   });
 }
 
+function resumirTexto(texto) {
+  if (!texto) return 'N/A';
+
+  return texto.length > 70
+    ? `${texto.slice(0, 70)}...`
+    : texto;
+}
+
+function EstadoOrdenBadge({ estado }) {
+  let color = 'bg-gray-600';
+
+  if (estado === 'Pendiente') color = 'bg-yellow-500';
+  else if (estado === 'En proceso') color = 'bg-blue-600';
+  else if (estado === 'Entregada') color = 'bg-green-600';
+  else if (estado === 'Cancelada') color = 'bg-red-600';
+
+  return (
+    <StatusBadge
+      text={estado || 'N/A'}
+      color={color}
+      minWidth="min-w-[105px]"
+    />
+  );
+}
+
 function RiesgoBadge({ nivel, score }) {
   return (
-    <span
-      className={`${obtenerColorRiesgo(nivel)} text-white px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap inline-block`}
-      title={`${nivel} - ${score}/100`}
-    >
-      {nivel} {score}
-    </span>
+    <StatusBadge
+      text={`${nivel} ${score}/100`}
+      color={obtenerColorRiesgo(nivel)}
+      minWidth="min-w-[105px]"
+    />
   );
 }
 
