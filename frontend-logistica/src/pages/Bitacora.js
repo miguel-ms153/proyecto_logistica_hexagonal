@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import DataTable from 'react-data-table-component';
-
-import Sidebar from '../components/Sidebar';
-
 import API from '../services/api';
 
-import { exportarExcel } from '../utils/exportExcel';
-import { exportarPDF } from '../utils/exportPDF';
+import AlertMessage from '../components/common/AlertMessage';
+import DataTableCard from '../components/common/DataTableCard';
+import ExportButtons from '../components/common/ExportButtons';
+import KpiGrid from '../components/common/KpiGrid';
+import PageHeader from '../components/common/PageHeader';
+import PageLayout from '../components/common/PageLayout';
+import SectionCard from '../components/common/SectionCard';
+import StatusBadge from '../components/common/StatusBadge';
 
 function Bitacora() {
   const [registros, setRegistros] = useState([]);
@@ -66,47 +68,95 @@ function Bitacora() {
   const creaciones = registros.filter((item) => item.accion === 'CREAR').length;
   const ediciones = registros.filter((item) => item.accion === 'EDITAR').length;
   const eliminaciones = registros.filter((item) => item.accion === 'ELIMINAR').length;
+  const operacionesCriticas = eliminaciones;
+
+  const datosExportacion = filtrados.map((item) => ({
+    ID: item.id_bitacora,
+    Fecha: formatearFecha(item.fecha),
+    Usuario: item.usuario || 'N/A',
+    Email: item.email || 'N/A',
+    Rol: item.rol || 'N/A',
+    Accion: item.accion || 'N/A',
+    Modulo: item.modulo || 'N/A',
+    Detalle: item.detalle || 'N/A',
+    Ruta: item.ruta || 'N/A',
+    HTTP: item.estado_http || 'N/A'
+  }));
 
   const columns = [
     {
       name: 'ID',
       selector: (row) => row.id_bitacora,
       sortable: true,
-      width: '80px'
+      width: '72px'
     },
     {
       name: 'Fecha',
       selector: (row) => formatearFecha(row.fecha),
       sortable: true,
-      grow: 2
+      width: '145px',
+      cell: (row) => (
+        <span className="text-slate-700 text-sm">
+          {formatearFecha(row.fecha)}
+        </span>
+      )
     },
     {
       name: 'Usuario',
+      minWidth: '190px',
+      grow: 2,
       cell: (row) => (
-        <div>
+        <div className="min-w-0">
           <p className="font-bold text-slate-800">{row.usuario}</p>
-          <p className="text-sm text-gray-500">{row.rol}</p>
+          <p className="text-xs text-gray-500 truncate" title={row.email}>
+            {row.rol || 'Sin rol'} | {row.email || 'Sin email'}
+          </p>
         </div>
-      ),
-      grow: 2
+      )
     },
     {
       name: 'Accion',
+      width: '120px',
+      selector: (row) => row.accion,
+      sortable: true,
       cell: (row) => <AccionBadge accion={row.accion} />
     },
     {
       name: 'Modulo',
       selector: (row) => row.modulo,
-      sortable: true
+      sortable: true,
+      width: '135px',
+      cell: (row) => (
+        <span className="font-bold text-slate-700">
+          {row.modulo || 'N/A'}
+        </span>
+      )
     },
     {
       name: 'Detalle',
       selector: (row) => row.detalle,
-      grow: 3
+      minWidth: '260px',
+      grow: 3,
+      cell: (row) => (
+        <div className="min-w-0">
+          <p className="text-slate-700 line-clamp-2" title={row.detalle}>
+            {row.detalle || 'Sin detalle'}
+          </p>
+
+          {row.ruta && (
+            <p className="text-xs text-slate-500 truncate mt-1" title={row.ruta}>
+              {row.ruta}
+            </p>
+          )}
+        </div>
+      )
     },
     {
       name: 'HTTP',
-      selector: (row) => row.estado_http || 'N/A'
+      width: '105px',
+      selector: (row) => row.estado_http || 'N/A',
+      sortable: true,
+      cell: (row) => <HttpBadge estado={row.estado_http} />
     }
   ];
 
@@ -116,53 +166,63 @@ function Bitacora() {
         backgroundColor: '#0f172a',
         color: 'white',
         fontWeight: 'bold',
-        fontSize: '15px'
+        fontSize: '13px',
+        minHeight: '46px'
       }
     },
     rows: {
       style: {
-        minHeight: '72px',
-        fontSize: '15px'
+        minHeight: '58px',
+        fontSize: '13px'
+      }
+    },
+    cells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
+      }
+    },
+    headCells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
       }
     }
   };
 
   return (
-    <div className="flex bg-slate-100 min-h-screen">
-      <Sidebar />
+    <PageLayout>
+      <PageHeader
+        title="Bitacora del Sistema"
+        subtitle="Auditoria empresarial de acciones realizadas por usuarios en modulos operativos"
+        badge={`Registros: ${registros.length}`}
+        badgeColor={operacionesCriticas > 0 ? 'bg-red-600' : 'bg-blue-600'}
+      />
 
-      <div className="flex-1 p-8 overflow-x-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-slate-800">
-              Bitacora del Sistema
-            </h1>
+      <AlertMessage message={error} />
 
-            <p className="text-gray-500 mt-2">
-              Auditoria de acciones realizadas por usuarios en modulos operativos
-            </p>
-          </div>
+      <KpiGrid
+        items={[
+          { title: 'Registros', value: registros.length, color: 'bg-blue-600' },
+          { title: 'Creaciones', value: creaciones, color: 'bg-green-600' },
+          { title: 'Ediciones', value: ediciones, color: 'bg-yellow-500' },
+          { title: 'Eliminaciones', value: eliminaciones, color: 'bg-red-600' }
+        ]}
+      />
 
-          <div className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-semibold shadow-lg w-fit">
-            Total: {registros.length}
-          </div>
-        </div>
+      <PanelAuditoria
+        registros={registros.length}
+        filtrados={filtrados.length}
+        modulos={modulos.length}
+        operacionesCriticas={operacionesCriticas}
+      />
 
-        {error && (
-          <div className="bg-red-100 text-red-700 px-4 py-3 rounded-xl font-bold mb-6">
-            {error}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <KPI titulo="Registros" valor={registros.length} color="bg-blue-600" />
-          <KPI titulo="Creaciones" valor={creaciones} color="bg-green-600" />
-          <KPI titulo="Ediciones" valor={ediciones} color="bg-yellow-500" />
-          <KPI titulo="Eliminaciones" valor={eliminaciones} color="bg-red-600" />
-        </div>
-
-        <div className="bg-white rounded-2xl shadow p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <SectionCard
+        title="Filtros de auditoria"
+        subtitle="Busca por usuario, modulo, ruta o detalle y segmenta por accion"
+        className="!mb-5"
+      >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
               type="text"
               placeholder="Buscar por usuario, modulo, accion o detalle..."
@@ -199,49 +259,66 @@ function Bitacora() {
               ))}
             </select>
           </div>
+      </SectionCard>
+
+      <ExportButtons data={datosExportacion} fileName="bitacora" />
+
+      <DataTableCard
+        columns={columns}
+        data={filtrados}
+        noData="No hay registros de bitacora para los filtros seleccionados"
+        fixedHeaderScrollHeight="560px"
+        selectableRows={false}
+        dense
+        customStyles={customStyles}
+      />
+    </PageLayout>
+  );
+}
+
+function PanelAuditoria({
+  registros,
+  filtrados,
+  modulos,
+  operacionesCriticas
+}) {
+  return (
+    <div className="bg-slate-900 text-white rounded-2xl p-5 md:p-6 shadow-lg mb-5">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+        <div>
+          <p className="text-blue-200 text-sm font-bold uppercase tracking-wide">
+            Control de auditoria
+          </p>
+
+          <h2 className="text-3xl md:text-4xl font-bold mt-2">
+            {filtrados} eventos visibles
+          </h2>
+
+          <p className="text-slate-300 mt-2">
+            Trazabilidad de actividad por usuario, modulo, accion y respuesta HTTP.
+          </p>
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-6">
-          <button
-            type="button"
-            onClick={() => exportarExcel(filtrados, 'bitacora')}
-            className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-xl font-bold"
-          >
-            Exportar Excel
-          </button>
-
-          <button
-            type="button"
-            onClick={() => exportarPDF(filtrados, 'bitacora')}
-            className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-bold"
-          >
-            Exportar PDF
-          </button>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow p-4">
-          <DataTable
-            columns={columns}
-            data={filtrados}
-            pagination
-            responsive
-            striped
-            highlightOnHover
-            fixedHeader
-            fixedHeaderScrollHeight="560px"
-            customStyles={customStyles}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full xl:w-auto">
+          <AuditMetric title="Total logs" value={registros} />
+          <AuditMetric title="Modulos" value={modulos} />
+          <AuditMetric title="Criticos" value={operacionesCriticas} />
         </div>
       </div>
     </div>
   );
 }
 
-function KPI({ titulo, valor, color }) {
+function AuditMetric({ title, value }) {
   return (
-    <div className={`${color} text-white p-6 rounded-2xl shadow-lg`}>
-      <p className="text-lg font-medium">{titulo}</p>
-      <h2 className="text-4xl font-bold mt-3">{valor}</h2>
+    <div className="bg-white/10 border border-white/10 rounded-xl p-4 min-w-[150px]">
+      <p className="text-xs text-slate-300 font-bold uppercase">
+        {title}
+      </p>
+
+      <p className="text-xl font-bold mt-1">
+        {value}
+      </p>
     </div>
   );
 }
@@ -254,9 +331,28 @@ function AccionBadge({ accion }) {
   else if (accion === 'ELIMINAR') color = 'bg-red-600';
 
   return (
-    <span className={`${color} text-white px-4 py-2 rounded-full text-sm font-bold w-fit`}>
-      {accion}
-    </span>
+    <StatusBadge
+      text={accion || 'N/A'}
+      color={color}
+      minWidth="min-w-[92px]"
+    />
+  );
+}
+
+function HttpBadge({ estado }) {
+  const codigo = Number(estado || 0);
+  let color = 'bg-slate-600';
+
+  if (codigo >= 200 && codigo < 300) color = 'bg-green-600';
+  else if (codigo >= 400 && codigo < 500) color = 'bg-yellow-500';
+  else if (codigo >= 500) color = 'bg-red-600';
+
+  return (
+    <StatusBadge
+      text={estado || 'N/A'}
+      color={color}
+      minWidth="min-w-[75px]"
+    />
   );
 }
 
@@ -276,11 +372,13 @@ const inputStyle = `
   w-full
   border
   border-gray-300
-  rounded-xl
-  p-4
+  rounded-lg
+  px-4
+  py-3
   outline-none
   focus:ring-2
   focus:ring-blue-500
+  text-sm
 `;
 
 export default Bitacora;
