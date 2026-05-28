@@ -202,27 +202,46 @@ function Reportes() {
   const columns = [
     {
       name: 'Orden',
+      width: '95px',
       selector: (row) => `#${row.orden}`,
       sortable: true
     },
     {
       name: 'Usuario',
+      width: '145px',
       selector: (row) => row.usuario,
       sortable: true,
-      grow: 2
+      cell: (row) => (
+        <span className="truncate block max-w-[120px]" title={row.usuario}>
+          {row.usuario}
+        </span>
+      )
     },
     {
       name: 'Estado',
+      width: '125px',
       selector: (row) => row.estado,
-      sortable: true
+      sortable: true,
+      cell: (row) => (
+        <span className="truncate block max-w-[105px]" title={row.estado}>
+          {row.estado}
+        </span>
+      )
     },
     {
       name: 'Fecha',
+      width: '115px',
       selector: (row) => row.fecha,
-      sortable: true
+      sortable: true,
+      cell: (row) => (
+        <span className="truncate block max-w-[95px]" title={row.fecha}>
+          {row.fecha}
+        </span>
+      )
     },
     {
       name: 'Valor pagado',
+      width: '130px',
       cell: (row) => (
         <span className="font-bold text-green-600">
           ${Number(row.valor_pagado || 0).toFixed(2)}
@@ -231,20 +250,24 @@ function Reportes() {
     },
     {
       name: 'Embarques',
+      width: '110px',
       selector: (row) => row.embarques
     },
     {
       name: 'Aduanas',
+      width: '100px',
       selector: (row) => row.aduanas
     },
     {
       name: 'Docs',
+      width: '85px',
       selector: (row) => row.documentos
     },
     {
-      name: 'Riesgo IA',
+      name: 'Riesgo',
+      width: '120px',
       cell: (row) => <RiesgoBadge nivel={row.riesgo} score={row.score} />,
-      grow: 2
+      center: true
     }
   ];
 
@@ -254,13 +277,14 @@ function Reportes() {
         backgroundColor: '#0f172a',
         color: 'white',
         fontWeight: 'bold',
-        fontSize: '15px'
+        fontSize: '13px',
+        minHeight: '48px'
       }
     },
     rows: {
       style: {
-        minHeight: '68px',
-        fontSize: '15px'
+        minHeight: '54px',
+        fontSize: '13px'
       }
     }
   };
@@ -269,19 +293,19 @@ function Reportes() {
     <div className="flex bg-slate-100 min-h-screen">
       <Sidebar />
 
-      <div className="flex-1 p-8 overflow-x-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
+      <div className="flex-1 p-4 md:p-5 xl:p-6 overflow-x-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
           <div>
-            <h1 className="text-4xl font-bold text-slate-800">
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
               Reportes Gerenciales
             </h1>
 
-            <p className="text-gray-500 mt-2">
+            <p className="text-sm md:text-base text-gray-500 mt-1">
               Analitica por fechas para comercio exterior, pagos, aduana y documentos
             </p>
           </div>
 
-          <div className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-semibold shadow-lg w-fit">
+          <div className="bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold shadow w-fit text-sm">
             Ordenes: {reporte.ordenesFiltradas.length}
           </div>
         </div>
@@ -292,8 +316,8 @@ function Reportes() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <CampoFormulario label="Desde">
               <input
                 type="date"
@@ -319,7 +343,7 @@ function Reportes() {
                   setDesde('');
                   setHasta('');
                 }}
-                className="bg-slate-700 hover:bg-slate-800 text-white px-6 py-4 rounded-xl font-bold w-full"
+                className="bg-slate-700 hover:bg-slate-800 text-white px-4 py-3 rounded-lg font-bold w-full text-sm"
               >
                 Limpiar filtros
               </button>
@@ -327,20 +351,20 @@ function Reportes() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
           <KPI titulo="Valor pagado" valor={`$${reporte.valorPagado.toFixed(2)}`} color="bg-green-600" />
           <KPI titulo="Pagos pendientes" valor={reporte.pagosPendientes} color="bg-yellow-500" />
           <KPI titulo="Embarques retrasados" valor={reporte.embarquesRetrasados} color="bg-red-600" />
           <KPI titulo="Score promedio IA" valor={`${reporte.scorePromedio}/100`} color={obtenerColorRiesgoScore(reporte.scorePromedio)} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
           <KPI titulo="Aduanas observadas" valor={reporte.aduanasObservadas} color="bg-purple-600" />
           <KPI titulo="Docs pendientes" valor={reporte.documentosPendientes} color="bg-blue-600" />
           <KPI titulo="Docs vencidos" valor={reporte.documentosVencidos} color="bg-slate-800" />
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
           <RankingCard
             titulo="Clientes con mas ordenes"
             items={reporte.clientesRanking}
@@ -364,11 +388,11 @@ function Reportes() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-6">
+        <div className="flex flex-wrap gap-3 mb-5">
           <button
             type="button"
             onClick={() => exportarExcel(reporte.resumenExportable, 'reporte_gerencial')}
-            className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-xl font-bold"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm"
           >
             Exportar Excel
           </button>
@@ -376,13 +400,13 @@ function Reportes() {
           <button
             type="button"
             onClick={() => exportarPDF(reporte.resumenExportable, 'reporte_gerencial')}
-            className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-bold"
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm"
           >
             Exportar PDF
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow p-4">
+        <div className="bg-white rounded-xl shadow-sm p-3">
           <DataTable
             columns={columns}
             data={reporte.resumenExportable}
@@ -414,17 +438,17 @@ function CampoFormulario({ label, children }) {
 
 function KPI({ titulo, valor, color }) {
   return (
-    <div className={`${color} text-white p-6 rounded-2xl shadow-lg`}>
-      <p className="text-lg font-medium">{titulo}</p>
-      <h2 className="text-4xl font-bold mt-3 break-words">{valor}</h2>
+    <div className={`${color} text-white p-4 rounded-xl shadow-md min-h-[108px]`}>
+      <p className="text-sm font-medium leading-tight">{titulo}</p>
+      <h2 className="text-2xl md:text-3xl font-bold mt-2 break-words leading-tight">{valor}</h2>
     </div>
   );
 }
 
 function RankingCard({ titulo, items, empty }) {
   return (
-    <div className="bg-white rounded-2xl shadow p-6">
-      <h2 className="text-2xl font-bold text-slate-800 mb-5">
+    <div className="bg-white rounded-xl shadow-sm p-4">
+      <h2 className="text-lg font-bold text-slate-800 mb-4">
         {titulo}
       </h2>
 
@@ -432,22 +456,22 @@ function RankingCard({ titulo, items, empty }) {
         <p className="text-gray-500">{empty}</p>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {items.slice(0, 5).map((item, index) => (
-          <div key={item.nombre} className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
+          <div key={item.nombre} className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
               {index + 1}
             </div>
 
             <div className="flex-1">
               <div className="flex items-center justify-between gap-3">
-                <p className="font-bold text-slate-800">{item.nombre}</p>
-                <p className="font-bold text-blue-600">{item.total}</p>
+                <p className="font-bold text-sm text-slate-800 truncate">{item.nombre}</p>
+                <p className="font-bold text-sm text-blue-600">{item.total}</p>
               </div>
 
-              <div className="h-3 bg-slate-200 rounded-full mt-2 overflow-hidden">
+              <div className="h-2 bg-slate-200 rounded-full mt-2 overflow-hidden">
                 <div
-                  className="h-3 bg-blue-600 rounded-full"
+                  className="h-2 bg-blue-600 rounded-full"
                   style={{ width: `${item.porcentaje}%` }}
                 />
               </div>
@@ -461,8 +485,8 @@ function RankingCard({ titulo, items, empty }) {
 
 function DistribucionCard({ titulo, items }) {
   return (
-    <div className="bg-white rounded-2xl shadow p-6">
-      <h2 className="text-2xl font-bold text-slate-800 mb-5">
+    <div className="bg-white rounded-xl shadow-sm p-4">
+      <h2 className="text-lg font-bold text-slate-800 mb-4">
         {titulo}
       </h2>
 
@@ -470,17 +494,17 @@ function DistribucionCard({ titulo, items }) {
         <p className="text-gray-500">Sin datos disponibles</p>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {items.map((item) => (
           <div key={item.nombre}>
             <div className="flex items-center justify-between mb-2">
-              <p className="font-bold text-slate-700">{item.nombre}</p>
-              <p className="font-bold text-slate-900">{item.total}</p>
+              <p className="font-bold text-sm text-slate-700">{item.nombre}</p>
+              <p className="font-bold text-sm text-slate-900">{item.total}</p>
             </div>
 
-            <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
               <div
-                className="h-3 bg-green-600 rounded-full"
+                className="h-2 bg-green-600 rounded-full"
                 style={{ width: `${item.porcentaje}%` }}
               />
             </div>
@@ -585,8 +609,11 @@ function formatearFecha(fecha) {
 
 function RiesgoBadge({ nivel, score }) {
   return (
-    <span className={`${obtenerColorRiesgo(nivel)} text-white px-4 py-2 rounded-full text-sm font-bold w-fit`}>
-      {nivel} - {score}/100
+    <span
+      className={`${obtenerColorRiesgo(nivel)} text-white px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap inline-block`}
+      title={`${nivel} - ${score}/100`}
+    >
+      {nivel} {score}
     </span>
   );
 }
@@ -609,11 +636,13 @@ const inputStyle = `
   w-full
   border
   border-gray-300
-  rounded-xl
-  p-4
+  rounded-lg
+  px-4
+  py-3
   outline-none
   focus:ring-2
   focus:ring-blue-500
+  text-sm
 `;
 
 export default Reportes;

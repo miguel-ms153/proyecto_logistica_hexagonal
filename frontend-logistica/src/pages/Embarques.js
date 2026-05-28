@@ -13,6 +13,21 @@ import SearchBox from '../components/common/SearchBox';
 import SectionCard from '../components/common/SectionCard';
 import StatusBadge from '../components/common/StatusBadge';
 
+const transportes = [
+  {
+    label: 'Maritimo',
+    value: 'Mar\u00edtimo'
+  },
+  {
+    label: 'Aereo',
+    value: 'A\u00e9reo'
+  },
+  {
+    label: 'Terrestre',
+    value: 'Terrestre'
+  }
+];
+
 function Embarques() {
   const [embarques, setEmbarques] = useState([]);
 
@@ -21,7 +36,7 @@ function Embarques() {
   const [destino, setDestino] = useState('');
   const [estado, setEstado] = useState('En camino');
 
-  const [tipoTransporte, setTipoTransporte] = useState('Maritimo');
+  const [tipoTransporte, setTipoTransporte] = useState('Mar\u00edtimo');
   const [ubicacion, setUbicacion] = useState('');
   const [latitud, setLatitud] = useState('');
   const [longitud, setLongitud] = useState('');
@@ -31,6 +46,7 @@ function Embarques() {
   const [embarqueEditando, setEmbarqueEditando] = useState(null);
 
   const [loading, setLoading] = useState(false);
+  const [buscandoCoordenadas, setBuscandoCoordenadas] = useState(false);
   const [error, setError] = useState('');
 
   const obtenerEmbarques = async () => {
@@ -52,7 +68,7 @@ function Embarques() {
     setOrigen('');
     setDestino('');
     setEstado('En camino');
-    setTipoTransporte('Maritimo');
+    setTipoTransporte('Mar\u00edtimo');
     setUbicacion('');
     setLatitud('');
     setLongitud('');
@@ -119,11 +135,54 @@ function Embarques() {
     setOrigen(embarque.origen || '');
     setDestino(embarque.destino || '');
     setEstado(embarque.estado || 'En camino');
-    setTipoTransporte(embarque.tipo_transporte || 'Maritimo');
+    setTipoTransporte(embarque.tipo_transporte || 'Mar\u00edtimo');
     setUbicacion(embarque.ubicacion || embarque.origen || '');
     setLatitud(embarque.latitud || '');
     setLongitud(embarque.longitud || '');
     setError('');
+  };
+
+  const buscarCoordenadas = async () => {
+    const lugar = ubicacion || destino || origen;
+
+    if (!lugar.trim()) {
+      setError('Ingresa una ubicacion, origen o destino para buscar coordenadas');
+      return;
+    }
+
+    try {
+      setBuscandoCoordenadas(true);
+      setError('');
+
+      const params = new URLSearchParams({
+        q: lugar,
+        format: 'json',
+        limit: '1'
+      });
+
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`
+      );
+
+      const data = await res.json();
+
+      if (!data.length) {
+        setError('No se encontraron coordenadas para esa ubicacion');
+        return;
+      }
+
+      setLatitud(Number(data[0].lat).toFixed(6));
+      setLongitud(Number(data[0].lon).toFixed(6));
+
+      if (!ubicacion) {
+        setUbicacion(lugar);
+      }
+    } catch (error) {
+      console.log(error);
+      setError('No se pudieron buscar las coordenadas');
+    } finally {
+      setBuscandoCoordenadas(false);
+    }
   };
 
   const eliminarEmbarque = async (id) => {
@@ -317,9 +376,11 @@ function Embarques() {
             onChange={(e) => setTipoTransporte(e.target.value)}
             className={inputStyle}
           >
-            <option value="Maritimo">Maritimo</option>
-            <option value="Aereo">Aereo</option>
-            <option value="Terrestre">Terrestre</option>
+            {transportes.map((transporte) => (
+              <option key={transporte.value} value={transporte.value}>
+                {transporte.label}
+              </option>
+            ))}
           </select>
 
           <input
@@ -345,6 +406,15 @@ function Embarques() {
             onChange={(e) => setLongitud(e.target.value)}
             className={inputStyle}
           />
+
+          <button
+            type="button"
+            onClick={buscarCoordenadas}
+            disabled={buscandoCoordenadas}
+            className="bg-slate-800 hover:bg-slate-900 disabled:bg-slate-400 text-white px-5 py-2.5 rounded-lg font-semibold whitespace-nowrap text-sm"
+          >
+            {buscandoCoordenadas ? 'Buscando...' : 'Buscar coordenadas'}
+          </button>
         </div>
 
         <FormActions
@@ -377,7 +447,10 @@ function Embarques() {
 function calcularRiesgoInicial(estado, tipoTransporte) {
   if (estado === 'Retrasado') return 'ALTO';
 
-  if (tipoTransporte === 'Maritimo' && estado === 'En puerto') {
+  if (
+    (tipoTransporte === 'Mar\u00edtimo' || tipoTransporte === 'Maritimo') &&
+    estado === 'En puerto'
+  ) {
     return 'MEDIO';
   }
 

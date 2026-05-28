@@ -17,8 +17,14 @@ const TrackingSchema = new mongoose.Schema({
 
   tipo_transporte: {
     type: String,
-    enum: ['Marítimo', 'Aéreo', 'Terrestre'],
-    default: 'Marítimo'
+    enum: [
+      'Mar\u00edtimo',
+      'A\u00e9reo',
+      'Terrestre',
+      'Maritimo',
+      'Aereo'
+    ],
+    default: 'Mar\u00edtimo'
   },
 
   estado: String,
