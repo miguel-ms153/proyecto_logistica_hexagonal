@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react';
 
 import API from '../services/api';
 
-import Sidebar from '../components/Sidebar';
-
-import DataTable from 'react-data-table-component';
-
-import { exportarExcel } from '../utils/exportExcel';
-
-import { exportarPDF } from '../utils/exportPDF';
+import AlertMessage from '../components/common/AlertMessage';
+import DataTableCard from '../components/common/DataTableCard';
+import ExportButtons from '../components/common/ExportButtons';
+import FormActions from '../components/common/FormActions';
+import KpiGrid from '../components/common/KpiGrid';
+import PageHeader from '../components/common/PageHeader';
+import PageLayout from '../components/common/PageLayout';
+import SearchBox from '../components/common/SearchBox';
+import SectionCard from '../components/common/SectionCard';
+import StatusBadge from '../components/common/StatusBadge';
 
 function Embarques() {
   const [embarques, setEmbarques] = useState([]);
@@ -18,13 +21,12 @@ function Embarques() {
   const [destino, setDestino] = useState('');
   const [estado, setEstado] = useState('En camino');
 
-  const [tipoTransporte, setTipoTransporte] = useState('Marítimo');
+  const [tipoTransporte, setTipoTransporte] = useState('Maritimo');
   const [ubicacion, setUbicacion] = useState('');
   const [latitud, setLatitud] = useState('');
   const [longitud, setLongitud] = useState('');
 
   const [busqueda, setBusqueda] = useState('');
-
   const [editando, setEditando] = useState(false);
   const [embarqueEditando, setEmbarqueEditando] = useState(null);
 
@@ -34,11 +36,9 @@ function Embarques() {
   const obtenerEmbarques = async () => {
     try {
       const res = await API.get('/embarques');
-
       setEmbarques(res.data);
     } catch (error) {
       console.log(error);
-
       setError('No se pudieron cargar los embarques');
     }
   };
@@ -52,7 +52,7 @@ function Embarques() {
     setOrigen('');
     setDestino('');
     setEstado('En camino');
-    setTipoTransporte('Marítimo');
+    setTipoTransporte('Maritimo');
     setUbicacion('');
     setLatitud('');
     setLongitud('');
@@ -97,9 +97,7 @@ function Embarques() {
       }
 
       await API.post('/tracking', trackingData);
-
       await obtenerEmbarques();
-
       limpiarFormulario();
     } catch (error) {
       console.log(error);
@@ -121,57 +119,57 @@ function Embarques() {
     setOrigen(embarque.origen || '');
     setDestino(embarque.destino || '');
     setEstado(embarque.estado || 'En camino');
-
-    setTipoTransporte(embarque.tipo_transporte || 'Marítimo');
+    setTipoTransporte(embarque.tipo_transporte || 'Maritimo');
     setUbicacion(embarque.ubicacion || embarque.origen || '');
     setLatitud(embarque.latitud || '');
     setLongitud(embarque.longitud || '');
-
     setError('');
   };
 
   const eliminarEmbarque = async (id) => {
-    const confirmar = window.confirm(
-      '¿Seguro que deseas eliminar este embarque?'
-    );
+    const confirmar = window.confirm('Seguro que deseas eliminar este embarque?');
 
     if (!confirmar) return;
 
     try {
       setError('');
-
       await API.delete(`/embarques/${id}`);
-
       obtenerEmbarques();
     } catch (error) {
       console.log(error);
-
       setError('No se pudo eliminar el embarque');
     }
   };
 
-  const filtrados = embarques.filter((e) => {
+  const filtrados = embarques.filter((embarque) => {
     const texto = busqueda.toLowerCase();
 
     return (
-      String(e.id_embarque).includes(texto) ||
-      String(e.id_orden || '').includes(texto) ||
-      e.origen?.toLowerCase().includes(texto) ||
-      e.destino?.toLowerCase().includes(texto) ||
-      e.estado?.toLowerCase().includes(texto)
+      String(embarque.id_embarque).includes(texto) ||
+      String(embarque.id_orden || '').includes(texto) ||
+      embarque.origen?.toLowerCase().includes(texto) ||
+      embarque.destino?.toLowerCase().includes(texto) ||
+      embarque.estado?.toLowerCase().includes(texto)
     );
   });
 
   const enCamino = embarques.filter(
-    (e) => e.estado === 'En camino' || e.estado === 'En tránsito'
+    (embarque) =>
+      embarque.estado === 'En camino' ||
+      embarque.estado === 'En transito' ||
+      embarque.estado === 'En tránsito'
   ).length;
 
-  const entregados = embarques.filter((e) => e.estado === 'Entregado').length;
+  const entregados = embarques.filter(
+    (embarque) => embarque.estado === 'Entregado'
+  ).length;
 
-  const retrasados = embarques.filter((e) => e.estado === 'Retrasado').length;
+  const retrasados = embarques.filter(
+    (embarque) => embarque.estado === 'Retrasado'
+  ).length;
 
   const ordenesVinculadas = new Set(
-    embarques.map((e) => e.id_orden).filter(Boolean)
+    embarques.map((embarque) => embarque.id_orden).filter(Boolean)
   ).size;
 
   const columns = [
@@ -210,7 +208,7 @@ function Embarques() {
       selector: (row) => `${row.origen || 'N/A'} - ${row.destino || 'N/A'}`,
       cell: (row) => (
         <span className="font-semibold text-slate-700">
-          {row.origen || 'N/A'} → {row.destino || 'N/A'}
+          {row.origen || 'N/A'} hacia {row.destino || 'N/A'}
         </span>
       )
     },
@@ -227,6 +225,7 @@ function Embarques() {
       cell: (row) => (
         <div className="flex gap-3 w-full justify-center">
           <button
+            type="button"
             onClick={() => editarEmbarque(row)}
             className="bg-yellow-500 hover:bg-yellow-600 text-white min-w-[90px] px-4 py-3 rounded-xl font-semibold whitespace-nowrap"
           >
@@ -234,6 +233,7 @@ function Embarques() {
           </button>
 
           <button
+            type="button"
             onClick={() => eliminarEmbarque(row.id_embarque)}
             className="bg-red-600 hover:bg-red-700 text-white min-w-[105px] px-4 py-3 rounded-xl font-semibold whitespace-nowrap"
           >
@@ -244,249 +244,155 @@ function Embarques() {
     }
   ];
 
-  const customStyles = {
-    headRow: {
-      style: {
-        backgroundColor: '#0f172a',
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: '15px',
-        minHeight: '62px'
-      }
-    },
-    rows: {
-      style: {
-        minHeight: '78px',
-        fontSize: '15px'
-      }
-    }
-  };
-
   return (
-    <div className="flex bg-slate-100 min-h-screen">
-      <Sidebar />
+    <PageLayout>
+      <PageHeader
+        title="Gestion de Embarques"
+        subtitle="Control logistico con actualizacion automatica de tracking"
+        badge={`Total: ${embarques.length}`}
+      />
 
-      <div className="flex-1 p-8 overflow-x-hidden">
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-5 mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-slate-800">
-              Gestión de Embarques
-            </h1>
+      <KpiGrid
+        items={[
+          { title: 'En Camino', value: enCamino, color: 'bg-blue-600' },
+          { title: 'Entregados', value: entregados, color: 'bg-green-600' },
+          { title: 'Retrasados', value: retrasados, color: 'bg-red-600' },
+          { title: 'Ordenes', value: ordenesVinculadas, color: 'bg-slate-800' }
+        ]}
+      />
 
-            <p className="text-gray-500 mt-2">
-              Control logístico con actualización automática de tracking
-            </p>
+      <SectionCard
+        title={editando ? 'Editar Embarque' : 'Nuevo Embarque'}
+        subtitle="Registra embarques y actualiza el tracking GPS en tiempo real"
+      >
+        {editando && (
+          <div className="mb-5">
+            <span className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-xl font-semibold w-fit">
+              Modo edicion
+            </span>
           </div>
+        )}
 
-          <div className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-semibold shadow-lg whitespace-nowrap">
-            Total: {embarques.length}
-          </div>
-        </div>
+        <AlertMessage message={error} />
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <KPI titulo="En Camino" valor={enCamino} color="bg-blue-600" />
-          <KPI titulo="Entregados" valor={entregados} color="bg-green-600" />
-          <KPI titulo="Retrasados" valor={retrasados} color="bg-red-600" />
-          <KPI titulo="Órdenes" valor={ordenesVinculadas} color="bg-slate-800" />
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          <input
+            type="number"
+            placeholder="ID Orden"
+            value={idOrden}
+            onChange={(e) => setIdOrden(e.target.value)}
+            className={inputStyle}
+          />
 
-        <div className="bg-white p-6 rounded-2xl shadow mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800">
-                {editando ? 'Editar Embarque' : 'Nuevo Embarque'}
-              </h2>
-
-              <p className="text-gray-500 mt-1">
-                Registra embarques y actualiza el tracking GPS en tiempo real
-              </p>
-            </div>
-
-            {editando && (
-              <span className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-xl font-semibold w-fit">
-                Modo edición
-              </span>
-            )}
-          </div>
-
-          {error && (
-            <div className="mb-5 bg-red-100 text-red-700 px-4 py-3 rounded-xl font-semibold">
-              {error}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-            <input
-              type="number"
-              placeholder="ID Orden"
-              value={idOrden}
-              onChange={(e) => setIdOrden(e.target.value)}
-              className={inputStyle}
-            />
-
-            <input
-              type="text"
-              placeholder="Origen"
-              value={origen}
-              onChange={(e) => setOrigen(e.target.value)}
-              className={inputStyle}
-            />
-
-            <input
-              type="text"
-              placeholder="Destino"
-              value={destino}
-              onChange={(e) => setDestino(e.target.value)}
-              className={inputStyle}
-            />
-
-            <select
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              className={inputStyle}
-            >
-              <option value="En camino">En camino</option>
-              <option value="En tránsito">En tránsito</option>
-              <option value="En puerto">En puerto</option>
-              <option value="Entregado">Entregado</option>
-              <option value="Retrasado">Retrasado</option>
-            </select>
-
-            <select
-              value={tipoTransporte}
-              onChange={(e) => setTipoTransporte(e.target.value)}
-              className={inputStyle}
-            >
-              <option value="Marítimo">Marítimo</option>
-              <option value="Aéreo">Aéreo</option>
-              <option value="Terrestre">Terrestre</option>
-            </select>
-
-            <input
-              type="text"
-              placeholder="Ubicación actual"
-              value={ubicacion}
-              onChange={(e) => setUbicacion(e.target.value)}
-              className={inputStyle}
-            />
-
-            <input
-              type="number"
-              placeholder="Latitud"
-              value={latitud}
-              onChange={(e) => setLatitud(e.target.value)}
-              className={inputStyle}
-            />
-
-            <input
-              type="number"
-              placeholder="Longitud"
-              value={longitud}
-              onChange={(e) => setLongitud(e.target.value)}
-              className={inputStyle}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-3 mt-6">
-            <button
-              onClick={guardarEmbarque}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-6 py-3 rounded-xl font-semibold whitespace-nowrap"
-            >
-              {loading
-                ? 'Guardando...'
-                : editando
-                  ? 'Actualizar Embarque y Tracking'
-                  : 'Crear Embarque y Tracking'}
-            </button>
-
-            {editando && (
-              <button
-                onClick={limpiarFormulario}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold whitespace-nowrap"
-              >
-                Cancelar
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl shadow mb-6">
           <input
             type="text"
-            placeholder="Buscar por ID, orden, origen, destino o estado..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Origen"
+            value={origen}
+            onChange={(e) => setOrigen(e.target.value)}
+            className={inputStyle}
+          />
+
+          <input
+            type="text"
+            placeholder="Destino"
+            value={destino}
+            onChange={(e) => setDestino(e.target.value)}
+            className={inputStyle}
+          />
+
+          <select
+            value={estado}
+            onChange={(e) => setEstado(e.target.value)}
+            className={inputStyle}
+          >
+            <option value="En camino">En camino</option>
+            <option value="En transito">En transito</option>
+            <option value="En puerto">En puerto</option>
+            <option value="Entregado">Entregado</option>
+            <option value="Retrasado">Retrasado</option>
+          </select>
+
+          <select
+            value={tipoTransporte}
+            onChange={(e) => setTipoTransporte(e.target.value)}
+            className={inputStyle}
+          >
+            <option value="Maritimo">Maritimo</option>
+            <option value="Aereo">Aereo</option>
+            <option value="Terrestre">Terrestre</option>
+          </select>
+
+          <input
+            type="text"
+            placeholder="Ubicacion actual"
+            value={ubicacion}
+            onChange={(e) => setUbicacion(e.target.value)}
+            className={inputStyle}
+          />
+
+          <input
+            type="number"
+            placeholder="Latitud"
+            value={latitud}
+            onChange={(e) => setLatitud(e.target.value)}
+            className={inputStyle}
+          />
+
+          <input
+            type="number"
+            placeholder="Longitud"
+            value={longitud}
+            onChange={(e) => setLongitud(e.target.value)}
             className={inputStyle}
           />
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-6">
-          <button
-            onClick={() => exportarExcel(filtrados, 'embarques')}
-            className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-xl font-semibold shadow-lg whitespace-nowrap"
-          >
-            Exportar Excel
-          </button>
+        <FormActions
+          loading={loading}
+          editing={editando}
+          createLabel="Crear Embarque y Tracking"
+          updateLabel="Actualizar Embarque y Tracking"
+          onSubmit={guardarEmbarque}
+          onCancel={limpiarFormulario}
+        />
+      </SectionCard>
 
-          <button
-            onClick={() => exportarPDF(filtrados, 'embarques')}
-            className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-semibold shadow-lg whitespace-nowrap"
-          >
-            Exportar PDF
-          </button>
-        </div>
+      <SearchBox
+        value={busqueda}
+        onChange={setBusqueda}
+        placeholder="Buscar por ID, orden, origen, destino o estado..."
+      />
 
-        <div className="bg-white rounded-2xl shadow p-4 overflow-x-auto">
-          <DataTable
-            columns={columns}
-            data={filtrados}
-            pagination
-            highlightOnHover
-            striped
-            responsive
-            selectableRows
-            fixedHeader
-            fixedHeaderScrollHeight="500px"
-            customStyles={customStyles}
-            noDataComponent="No hay embarques registrados"
-          />
-        </div>
-      </div>
-    </div>
+      <ExportButtons data={filtrados} fileName="embarques" />
+
+      <DataTableCard
+        columns={columns}
+        data={filtrados}
+        noData="No hay embarques registrados"
+      />
+    </PageLayout>
   );
 }
 
 function calcularRiesgoInicial(estado, tipoTransporte) {
   if (estado === 'Retrasado') return 'ALTO';
 
-  if (tipoTransporte === 'Marítimo' && estado === 'En puerto') {
+  if (tipoTransporte === 'Maritimo' && estado === 'En puerto') {
     return 'MEDIO';
   }
 
   return 'BAJO';
 }
 
-function KPI({ titulo, valor, color }) {
-  return (
-    <div className={`${color} text-white p-6 rounded-2xl shadow-lg`}>
-      <p className="text-lg font-medium">{titulo}</p>
-
-      <h2 className="text-4xl font-bold mt-3">{valor}</h2>
-    </div>
-  );
-}
-
 function EstadoBadge({ estado }) {
   let color = 'bg-gray-500';
-
   const texto = estado || 'Sin estado';
 
   if (texto === 'Entregado') {
     color = 'bg-green-600';
   } else if (texto === 'Retrasado') {
     color = 'bg-red-600';
-  } else if (texto === 'En tránsito') {
+  } else if (texto === 'En transito' || texto === 'En tránsito') {
     color = 'bg-blue-600';
   } else if (texto === 'En puerto') {
     color = 'bg-yellow-500';
@@ -495,23 +401,11 @@ function EstadoBadge({ estado }) {
   }
 
   return (
-    <span
-      className={`
-        ${color}
-        text-white
-        min-w-[120px]
-        text-center
-        px-4
-        py-2
-        rounded-full
-        text-sm
-        font-semibold
-        whitespace-nowrap
-        inline-block
-      `}
-    >
-      {texto}
-    </span>
+    <StatusBadge
+      text={texto}
+      color={color}
+      minWidth="min-w-[120px]"
+    />
   );
 }
 
