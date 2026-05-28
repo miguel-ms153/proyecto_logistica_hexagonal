@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
-import Sidebar from '../components/Sidebar';
-
 import API from '../services/api';
+
+import AlertMessage from '../components/common/AlertMessage';
+import PageLayout from '../components/common/PageLayout';
+import StatusBadge from '../components/common/StatusBadge';
 
 const coordenadasLugares = {
   Busan: {
@@ -396,37 +398,55 @@ function OrdenCompleta() {
   };
 
   return (
-    <div className="flex bg-slate-100 min-h-screen">
-      <Sidebar />
-
-      <div className="flex-1 p-8 overflow-x-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+    <PageLayout>
+      <div className="bg-slate-900 text-white rounded-2xl p-5 md:p-6 shadow-lg mb-5">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
           <div>
-            <h1 className="text-4xl font-bold text-slate-800">
+            <p className="text-blue-200 text-sm font-bold uppercase tracking-wide">
+              Portal de operaciones
+            </p>
+
+            <h1 className="text-3xl md:text-4xl font-bold mt-2">
               Nueva Orden Completa
             </h1>
 
-            <p className="text-gray-500 mt-2">
-              Registra usuario, productos, pago, embarque y tracking en un solo flujo
+            <p className="text-slate-300 mt-2 max-w-3xl">
+              Crea una operacion logistica integral con productos, pago,
+              embarque y tracking inteligente en un solo flujo guiado.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => navigate(esCliente ? '/tracking' : '/ordenes')}
-            className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-3 rounded-xl font-bold w-fit"
-          >
-            {esCliente ? 'Ver tracking' : 'Ver ordenes'}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(esCliente ? '/tracking' : '/ordenes')}
+              className="bg-white text-slate-900 hover:bg-slate-100 px-4 py-2.5 rounded-lg font-bold text-sm"
+            >
+              {esCliente ? 'Ver mi tracking' : 'Ver ordenes'}
+            </button>
+
+            <button
+              type="button"
+              onClick={limpiarTodo}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm"
+            >
+              Nueva solicitud
+            </button>
+          </div>
         </div>
 
-        {error && (
-          <div className="mt-6 bg-red-100 text-red-700 px-4 py-3 rounded-xl font-semibold">
-            {error}
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-6">
+          <MetricCard title="Cliente" value={usuarioSeleccionado?.nombre || 'Por definir'} />
+          <MetricCard title="Productos" value={productosOrden.length} />
+          <MetricCard title="Valor productos" value={`$${totalProductos.toFixed(2)}`} />
+          <MetricCard title="Transporte" value={tipoTransporte || 'N/A'} />
+        </div>
+      </div>
 
-        <div className="bg-white rounded-2xl shadow p-6 mt-8">
+      <AlertMessage message={error} />
+
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
+        <div className="bg-white rounded-2xl shadow p-5 md:p-6">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8">
             <PasoButton numero={1} actual={paso} texto="Usuario" setPaso={setPaso} />
             <PasoButton numero={2} actual={paso} texto="Productos" setPaso={setPaso} />
@@ -830,9 +850,126 @@ function OrdenCompleta() {
             </div>
           )}
         </div>
+
+        <ResumenOperacion
+          paso={paso}
+          usuario={usuarioSeleccionado}
+          estadoOrden={estadoOrden}
+          fechaOrden={fechaOrden}
+          productosOrden={productosOrden}
+          totalProductos={totalProductos}
+          monto={monto}
+          metodo={metodo}
+          estadoPago={estadoPago}
+          origen={origen}
+          destino={destino}
+          ubicacion={ubicacion}
+          tipoTransporte={tipoTransporte}
+          estadoEmbarque={estadoEmbarque}
+          latitud={latitud}
+          longitud={longitud}
+        />
       </div>
+    </PageLayout>
+  );
+}
+
+function MetricCard({ title, value }) {
+  return (
+    <div className="bg-white/10 border border-white/10 rounded-xl p-4">
+      <p className="text-xs text-slate-300 font-bold uppercase">
+        {title}
+      </p>
+
+      <p className="text-xl font-bold mt-1 truncate" title={String(value)}>
+        {value}
+      </p>
     </div>
   );
+}
+
+function ResumenOperacion({
+  paso,
+  usuario,
+  estadoOrden,
+  fechaOrden,
+  productosOrden,
+  totalProductos,
+  monto,
+  metodo,
+  estadoPago,
+  origen,
+  destino,
+  ubicacion,
+  tipoTransporte,
+  estadoEmbarque,
+  latitud,
+  longitud
+}) {
+  return (
+    <aside className="bg-white rounded-2xl shadow p-5 h-fit xl:sticky xl:top-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">
+            Resumen
+          </h2>
+
+          <p className="text-sm text-slate-500">
+            Paso {paso} de 5
+          </p>
+        </div>
+
+        <StatusBadge
+          text={estadoOrden || 'Pendiente'}
+          color={obtenerColorEstado(estadoOrden)}
+          minWidth="min-w-[98px]"
+        />
+      </div>
+
+      <div className="mt-5 space-y-3">
+        <ResumenLinea label="Cliente" value={usuario?.nombre || 'Por definir'} />
+        <ResumenLinea label="Fecha orden" value={fechaOrden || 'Pendiente'} />
+        <ResumenLinea label="Productos" value={`${productosOrden.length} items`} />
+        <ResumenLinea label="Valor productos" value={`$${totalProductos.toFixed(2)}`} />
+        <ResumenLinea label="Pago" value={`$${Number(monto || 0).toFixed(2)} - ${metodo}`} />
+        <ResumenLinea label="Estado pago" value={estadoPago} />
+        <ResumenLinea label="Ruta" value={`${origen || 'Origen'} hacia ${destino || 'Destino'}`} />
+        <ResumenLinea label="Ubicacion" value={ubicacion || 'Sin ubicacion'} />
+        <ResumenLinea label="Transporte" value={tipoTransporte} />
+        <ResumenLinea label="Estado embarque" value={estadoEmbarque} />
+        <ResumenLinea
+          label="Coordenadas"
+          value={
+            latitud && longitud
+              ? `${latitud}, ${longitud}`
+              : 'Pendientes'
+          }
+        />
+      </div>
+    </aside>
+  );
+}
+
+function ResumenLinea({ label, value }) {
+  return (
+    <div className="border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
+      <p className="text-xs text-slate-500 font-bold uppercase">
+        {label}
+      </p>
+
+      <p className="text-sm font-semibold text-slate-800 mt-1 break-words">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function obtenerColorEstado(estado) {
+  if (estado === 'Entregada') return 'bg-green-600';
+  if (estado === 'En proceso') return 'bg-blue-600';
+  if (estado === 'Cancelada') return 'bg-red-600';
+
+  return 'bg-yellow-500';
 }
 
 function PasoButton({
@@ -846,14 +983,17 @@ function PasoButton({
       type="button"
       onClick={() => setPaso(numero)}
       className={`
-        px-5
+        px-4
         py-3
         rounded-xl
         font-bold
         text-left
+        text-sm
+        transition
+        border
         ${actual === numero
-          ? 'bg-blue-600 text-white'
-          : 'bg-slate-100 text-slate-700'}
+          ? 'bg-blue-600 text-white border-blue-600 shadow'
+          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}
       `}
     >
       {numero}. {texto}
@@ -882,12 +1022,14 @@ const inputStyle = `
   w-full
   border
   border-gray-300
-  rounded-xl
-  p-4
+  rounded-lg
+  px-4
+  py-3
   outline-none
   bg-white
   focus:ring-2
   focus:ring-blue-500
+  text-sm
 `;
 
 export default OrdenCompleta;
