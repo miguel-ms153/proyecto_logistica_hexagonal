@@ -49,8 +49,8 @@ export const exportarPDF = (
       columnas.map(
         (col) =>
 
-          String(
-            item[col] ?? ''
+          formatearValor(
+            item[col]
           )
       )
     );
@@ -74,3 +74,27 @@ export const exportarPDF = (
   );
 
 };
+
+function formatearValor(valor) {
+  if (valor === null || valor === undefined) {
+    return '';
+  }
+
+  if (Array.isArray(valor)) {
+    return valor
+      .map((item) => formatearValor(item))
+      .join(', ');
+  }
+
+  if (typeof valor === 'object') {
+    if (valor.nombre) return String(valor.nombre);
+    if (valor.estado) return String(valor.estado);
+    if (valor.email) return String(valor.email);
+
+    return Object.entries(valor)
+      .map(([key, value]) => `${key}: ${formatearValor(value)}`)
+      .join(', ');
+  }
+
+  return String(valor);
+}

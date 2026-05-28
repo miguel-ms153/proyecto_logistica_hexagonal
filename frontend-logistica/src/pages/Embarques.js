@@ -234,13 +234,13 @@ function Embarques() {
   const columns = [
     {
       name: 'ID',
-      width: '80px',
+      width: '70px',
       selector: (row) => row.id_embarque,
       sortable: true
     },
     {
       name: 'Orden',
-      width: '120px',
+      width: '90px',
       selector: (row) => row.id_orden || 'N/A',
       sortable: true,
       cell: (row) => (
@@ -250,43 +250,63 @@ function Embarques() {
       )
     },
     {
-      name: 'Origen',
-      minWidth: '170px',
-      selector: (row) => row.origen || 'N/A',
-      sortable: true
-    },
-    {
-      name: 'Destino',
-      minWidth: '170px',
-      selector: (row) => row.destino || 'N/A',
-      sortable: true
-    },
-    {
       name: 'Ruta',
-      minWidth: '240px',
+      minWidth: '250px',
+      grow: 2,
       selector: (row) => `${row.origen || 'N/A'} - ${row.destino || 'N/A'}`,
       cell: (row) => (
-        <span className="font-semibold text-slate-700">
-          {row.origen || 'N/A'} hacia {row.destino || 'N/A'}
+        <div className="min-w-0">
+          <p className="font-bold text-slate-800 truncate" title={`${row.origen || 'N/A'} hacia ${row.destino || 'N/A'}`}>
+            {row.origen || 'N/A'} hacia {row.destino || 'N/A'}
+          </p>
+
+          <p className="text-xs text-slate-500">
+            Embarque #{row.id_embarque}
+          </p>
+        </div>
+      )
+    },
+    {
+      name: 'Transporte',
+      width: '125px',
+      selector: (row) => row.tipo_transporte || 'N/A',
+      cell: (row) => (
+        <span className="font-semibold text-slate-700 truncate block max-w-[105px]">
+          {normalizarTransporte(row.tipo_transporte)}
         </span>
       )
     },
     {
       name: 'Estado',
-      width: '170px',
+      width: '135px',
       selector: (row) => row.estado || 'Sin estado',
       sortable: true,
       cell: (row) => <EstadoBadge estado={row.estado} />
     },
     {
-      name: 'Acciones',
-      width: '240px',
+      name: 'Tracking',
+      width: '145px',
+      selector: (row) => row.ubicacion || row.origen || 'N/A',
       cell: (row) => (
-        <div className="flex gap-3 w-full justify-center">
+        <div className="text-sm">
+          <p className="font-semibold text-slate-700 truncate max-w-[120px]" title={row.ubicacion || row.origen || 'N/A'}>
+            {row.ubicacion || row.origen || 'N/A'}
+          </p>
+          <p className="text-xs text-slate-500">
+            {row.latitud && row.longitud ? 'GPS listo' : 'Sin GPS'}
+          </p>
+        </div>
+      )
+    },
+    {
+      name: 'Acciones',
+      width: '170px',
+      cell: (row) => (
+        <div className="flex gap-2 w-full justify-end">
           <button
             type="button"
             onClick={() => editarEmbarque(row)}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white min-w-[90px] px-4 py-3 rounded-xl font-semibold whitespace-nowrap"
+            className="bg-yellow-500 hover:bg-yellow-600 text-white min-w-[72px] px-3 py-2 rounded-lg font-semibold whitespace-nowrap text-xs"
           >
             Editar
           </button>
@@ -294,7 +314,7 @@ function Embarques() {
           <button
             type="button"
             onClick={() => eliminarEmbarque(row.id_embarque)}
-            className="bg-red-600 hover:bg-red-700 text-white min-w-[105px] px-4 py-3 rounded-xl font-semibold whitespace-nowrap"
+            className="bg-red-600 hover:bg-red-700 text-white min-w-[80px] px-3 py-2 rounded-lg font-semibold whitespace-nowrap text-xs"
           >
             Eliminar
           </button>
@@ -302,6 +322,36 @@ function Embarques() {
       )
     }
   ];
+
+  const tableStyles = {
+    headRow: {
+      style: {
+        backgroundColor: '#0f172a',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '13px',
+        minHeight: '46px'
+      }
+    },
+    rows: {
+      style: {
+        minHeight: '54px',
+        fontSize: '13px'
+      }
+    },
+    cells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
+      }
+    },
+    headCells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
+      }
+    }
+  };
 
   return (
     <PageLayout>
@@ -323,6 +373,7 @@ function Embarques() {
       <SectionCard
         title={editando ? 'Editar Embarque' : 'Nuevo Embarque'}
         subtitle="Registra embarques y actualiza el tracking GPS en tiempo real"
+        className="!mb-5"
       >
         {editando && (
           <div className="mb-5">
@@ -334,7 +385,7 @@ function Embarques() {
 
         <AlertMessage message={error} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <input
             type="number"
             placeholder="ID Orden"
@@ -382,7 +433,31 @@ function Embarques() {
               </option>
             ))}
           </select>
+        </div>
 
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 mb-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">
+                Coordenadas de tracking
+              </h3>
+
+              <p className="text-xs text-slate-500">
+                Usa la ubicacion actual, destino u origen para completar GPS.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={buscarCoordenadas}
+              disabled={buscandoCoordenadas}
+              className="bg-slate-800 hover:bg-slate-900 disabled:bg-slate-400 text-white px-4 py-2 rounded-lg font-semibold whitespace-nowrap text-xs"
+            >
+              {buscandoCoordenadas ? 'Buscando...' : 'Buscar coordenadas'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <input
             type="text"
             placeholder="Ubicacion actual"
@@ -406,15 +481,7 @@ function Embarques() {
             onChange={(e) => setLongitud(e.target.value)}
             className={inputStyle}
           />
-
-          <button
-            type="button"
-            onClick={buscarCoordenadas}
-            disabled={buscandoCoordenadas}
-            className="bg-slate-800 hover:bg-slate-900 disabled:bg-slate-400 text-white px-5 py-2.5 rounded-lg font-semibold whitespace-nowrap text-sm"
-          >
-            {buscandoCoordenadas ? 'Buscando...' : 'Buscar coordenadas'}
-          </button>
+          </div>
         </div>
 
         <FormActions
@@ -439,9 +506,20 @@ function Embarques() {
         columns={columns}
         data={filtrados}
         noData="No hay embarques registrados"
+        selectableRows={false}
+        dense
+        customStyles={tableStyles}
       />
     </PageLayout>
   );
+}
+
+function normalizarTransporte(transporte) {
+  if (!transporte) return 'N/A';
+  if (transporte === 'Mar\u00edtimo' || transporte === 'Maritimo') return 'Maritimo';
+  if (transporte === 'A\u00e9reo' || transporte === 'Aereo') return 'Aereo';
+
+  return transporte;
 }
 
 function calcularRiesgoInicial(estado, tipoTransporte) {
@@ -477,7 +555,7 @@ function EstadoBadge({ estado }) {
     <StatusBadge
       text={texto}
       color={color}
-      minWidth="min-w-[120px]"
+      minWidth="min-w-[105px]"
     />
   );
 }
@@ -486,12 +564,14 @@ const inputStyle = `
   w-full
   border
   border-gray-300
-  rounded-xl
-  p-4
+  rounded-lg
+  px-4
+  py-3
   outline-none
   bg-white
   focus:ring-2
   focus:ring-blue-500
+  text-sm
 `;
 
 export default Embarques;

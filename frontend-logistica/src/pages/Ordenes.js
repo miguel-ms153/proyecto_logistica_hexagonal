@@ -290,6 +290,19 @@ function Ordenes() {
     0
   );
 
+  const datosExportacion = filtrados.map((orden) => ({
+    orden: orden.id_orden,
+    usuario: orden.usuario?.nombre || 'Sin usuario',
+    rol: orden.usuario?.rol || 'N/A',
+    estado: orden.estado || 'Pendiente',
+    fecha: formatearFecha(orden.fecha),
+    embarque: obtenerResumenEmbarque(orden),
+    productos: obtenerResumenProductos(orden),
+    cantidad_productos: orden.productos?.length || 0,
+    pagos: orden.pagos?.length || 0,
+    total_pagado: `$${calcularTotalOrden(orden).toFixed(2)}`
+  }));
+
   const columns = [
     {
       name: 'ID',
@@ -492,7 +505,7 @@ function Ordenes() {
         placeholder="Buscar por ID, usuario, estado o embarque..."
       />
 
-      <ExportButtons data={filtrados} fileName="ordenes" />
+      <ExportButtons data={datosExportacion} fileName="ordenes" />
 
       <DataTableCard
         columns={columns}
@@ -640,6 +653,33 @@ function EmbarqueBadge({ estado }) {
       minWidth="min-w-[130px]"
     />
   );
+}
+
+function obtenerResumenEmbarque(orden) {
+  if (!orden.embarques || orden.embarques.length === 0) {
+    return 'Sin embarque';
+  }
+
+  return orden.embarques
+    .map((embarque) => {
+      const ruta =
+        embarque.origen || embarque.destino
+          ? `${embarque.origen || 'Origen'} - ${embarque.destino || 'Destino'}`
+          : 'Sin ruta';
+
+      return `${embarque.estado || 'Sin estado'} (${ruta})`;
+    })
+    .join(' | ');
+}
+
+function obtenerResumenProductos(orden) {
+  if (!orden.productos || orden.productos.length === 0) {
+    return 'Sin productos';
+  }
+
+  return orden.productos
+    .map((producto) => producto.nombre || `Producto #${producto.id_producto}`)
+    .join(', ');
 }
 
 const inputStyle = `
