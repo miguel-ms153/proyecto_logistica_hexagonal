@@ -174,13 +174,37 @@ function Pagos() {
       ? Math.round((aprobados / pagos.length) * 100)
       : 0;
 
+  const ordenSeleccionada = ordenes.find(
+    (orden) => Number(orden.id_orden) === Number(idOrden)
+  );
+
+  const totalOrdenSeleccionada =
+    calcularTotalOrden(ordenSeleccionada);
+
+  const pagadoOrdenSeleccionada =
+    calcularPagadoOrden({
+      pagos,
+      idOrden,
+      idPagoEditando: pagoEditando?.id_pago
+    });
+
+  const abonoActual = Number(monto || 0);
+  const saldoAntesAbono =
+    Math.max(totalOrdenSeleccionada - pagadoOrdenSeleccionada, 0);
+  const saldoDespuesAbono =
+    estado === 'Aprobado'
+      ? Math.max(saldoAntesAbono - abonoActual, 0)
+      : saldoAntesAbono;
+
   const datosExportacion = filtrados.map((pago) => ({
     ID: pago.id_pago,
     Orden: pago.id_orden ? `#${pago.id_orden}` : 'N/A',
     Monto: `$${Number(pago.monto || 0).toFixed(2)}`,
     Metodo: pago.metodo || 'Transferencia',
     Estado: pago.estado || 'Pendiente',
-    Fecha: formatearFecha(pago.fecha)
+    Fecha: formatearFecha(pago.fecha),
+    Total_orden: `$${calcularTotalOrdenPorId(ordenes, pago.id_orden).toFixed(2)}`,
+    Saldo: `$${calcularSaldoOrden(ordenes, pagos, pago.id_orden).toFixed(2)}`
   }));
 
   const columns = [
@@ -242,6 +266,17 @@ function Pagos() {
       selector: (row) => row.fecha || 'N/A',
       sortable: true,
       cell: (row) => <span>{formatearFecha(row.fecha)}</span>
+    },
+    {
+      name: 'Saldo',
+      width: '130px',
+      selector: (row) => calcularSaldoOrden(ordenes, pagos, row.id_orden),
+      sortable: true,
+      cell: (row) => (
+        <span className="font-bold text-slate-800">
+          ${calcularSaldoOrden(ordenes, pagos, row.id_orden).toFixed(2)}
+        </span>
+      )
     },
     {
       name: 'Acciones',
@@ -389,6 +424,16 @@ function Pagos() {
           />
         </div>
 
+        <SaldoOrdenPanel
+          orden={ordenSeleccionada}
+          totalOrden={totalOrdenSeleccionada}
+          pagado={pagadoOrdenSeleccionada}
+          abono={abonoActual}
+          saldoAntes={saldoAntesAbono}
+          saldoDespues={saldoDespuesAbono}
+          estadoPago={estado}
+        />
+
         <FormActions
           loading={loading}
           editing={editando}
@@ -469,6 +514,71 @@ function FinMetric({ title, value }) {
   );
 }
 
+function SaldoOrdenPanel({
+  orden,
+  totalOrden,
+  pagado,
+  abono,
+  saldoAntes,
+  saldoDespues,
+  estadoPago
+}) {
+  if (!orden) {
+    return (
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-5">
+        <p className="text-sm font-bold text-slate-700">
+          Selecciona una orden para calcular el saldo a pagar.
+        </p>
+      </div>
+    );
+  }
+
+  const aplicaAbono = estadoPago === 'Aprobado';
+
+  return (
+    <div className="bg-slate-900 text-white rounded-xl p-4 mt-5">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div>
+          <p className="text-sm text-slate-300 font-bold uppercase">
+            Estado de cuenta de la orden #{orden.id_orden}
+          </p>
+
+          <h3 className="text-2xl font-bold mt-1">
+            Saldo a pagar: ${saldoDespues.toFixed(2)}
+          </h3>
+
+          {!aplicaAbono && abono > 0 && (
+            <p className="text-yellow-300 text-sm mt-2">
+              El abono no reduce saldo hasta que el pago este aprobado.
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 w-full lg:w-auto">
+          <CuentaMetric title="Total orden" value={`$${totalOrden.toFixed(2)}`} />
+          <CuentaMetric title="Pagado" value={`$${pagado.toFixed(2)}`} />
+          <CuentaMetric title="Abono actual" value={`$${abono.toFixed(2)}`} />
+          <CuentaMetric title="Saldo previo" value={`$${saldoAntes.toFixed(2)}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CuentaMetric({ title, value }) {
+  return (
+    <div className="bg-white/10 border border-white/10 rounded-lg p-3 min-w-[130px]">
+      <p className="text-xs text-slate-300 font-bold uppercase">
+        {title}
+      </p>
+
+      <p className="text-lg font-bold mt-1">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function EstadoBadge({ estado }) {
   let color = 'bg-yellow-500';
   const texto = estado || 'Pendiente';
@@ -483,6 +593,71 @@ function EstadoBadge({ estado }) {
       minWidth="min-w-[105px]"
     />
   );
+}
+
+function calcularTotalOrden(orden) {
+  if (!orden) return 0;
+
+  const productos = orden.productos || [];
+
+  if (productos.length === 0) {
+    return Number(orden.total || 0);
+  }
+
+  return productos.reduce((acc, producto) => {
+    const detalle =
+      producto.detalle_orden ||
+      producto.detalle_ordens ||
+      producto.orden_producto ||
+      {};
+
+    const subtotal =
+      detalle.subtotal ??
+      producto.subtotal;
+
+    if (subtotal !== undefined && subtotal !== null) {
+      return acc + Number(subtotal || 0);
+    }
+
+    const cantidad =
+      detalle.cantidad ??
+      producto.cantidad ??
+      1;
+
+    return acc + (Number(producto.precio || 0) * Number(cantidad || 1));
+  }, 0);
+}
+
+function calcularTotalOrdenPorId(ordenes, idOrden) {
+  const orden = ordenes.find(
+    (item) => Number(item.id_orden) === Number(idOrden)
+  );
+
+  return calcularTotalOrden(orden);
+}
+
+function calcularPagadoOrden({
+  pagos,
+  idOrden,
+  idPagoEditando
+}) {
+  return pagos
+    .filter((pago) =>
+      Number(pago.id_orden) === Number(idOrden) &&
+      pago.estado === 'Aprobado' &&
+      Number(pago.id_pago) !== Number(idPagoEditando || 0)
+    )
+    .reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
+}
+
+function calcularSaldoOrden(ordenes, pagos, idOrden) {
+  const total = calcularTotalOrdenPorId(ordenes, idOrden);
+  const pagado = calcularPagadoOrden({
+    pagos,
+    idOrden
+  });
+
+  return Math.max(total - pagado, 0);
 }
 
 const inputStyle = `
