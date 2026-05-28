@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import Sidebar from '../components/Sidebar';
-
 import API from '../services/api';
+
+import AlertMessage from '../components/common/AlertMessage';
+import DataTableCard from '../components/common/DataTableCard';
+import ExportButtons from '../components/common/ExportButtons';
+import KpiGrid from '../components/common/KpiGrid';
+import PageHeader from '../components/common/PageHeader';
+import PageLayout from '../components/common/PageLayout';
+import SectionCard from '../components/common/SectionCard';
+import StatusBadge from '../components/common/StatusBadge';
 
 function Notificaciones() {
   const [productos, setProductos] = useState([]);
@@ -11,6 +18,7 @@ function Notificaciones() {
   const [aduanas, setAduanas] = useState([]);
   const [documentos, setDocumentos] = useState([]);
   const [filtro, setFiltro] = useState('Todas');
+  const [busqueda, setBusqueda] = useState('');
   const [error, setError] = useState('');
 
   const obtenerDatos = async () => {
@@ -55,12 +63,27 @@ function Notificaciones() {
   }, [productos, ordenes, embarques, aduanas, documentos]);
 
   const filtradas = useMemo(() => {
-    if (filtro === 'Todas') return notificaciones;
+    const texto = busqueda.toLowerCase();
 
-    return notificaciones.filter(
-      (item) => item.prioridad === filtro
-    );
-  }, [notificaciones, filtro]);
+    return notificaciones.filter((item) => {
+      const coincidePrioridad =
+        filtro === 'Todas' ||
+        item.prioridad === filtro;
+
+      const coincideBusqueda = [
+        item.modulo,
+        item.titulo,
+        item.detalle,
+        item.prioridad,
+        item.accion
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(texto);
+
+      return coincidePrioridad && coincideBusqueda;
+    });
+  }, [notificaciones, filtro, busqueda]);
 
   const altas = notificaciones.filter(
     (item) => item.prioridad === 'Alta'
@@ -74,56 +97,142 @@ function Notificaciones() {
     (item) => item.prioridad === 'Baja'
   ).length;
 
+  const datosExportacion = filtradas.map((item) => ({
+    Modulo: item.modulo,
+    Prioridad: item.prioridad,
+    Alerta: item.titulo,
+    Detalle: item.detalle,
+    Accion_sugerida: item.accion
+  }));
+
+  const columns = [
+    {
+      name: 'Modulo',
+      selector: (row) => row.modulo,
+      sortable: true,
+      width: '130px',
+      cell: (row) => (
+        <span className="font-bold text-slate-700">
+          {row.modulo}
+        </span>
+      )
+    },
+    {
+      name: 'Alerta',
+      selector: (row) => row.titulo,
+      sortable: true,
+      minWidth: '250px',
+      grow: 2,
+      cell: (row) => (
+        <div className="min-w-0 py-1">
+          <p className="font-bold text-slate-800 truncate" title={row.titulo}>
+            {row.titulo}
+          </p>
+
+          <p className="text-xs text-slate-500 truncate" title={row.detalle}>
+            {row.detalle}
+          </p>
+        </div>
+      )
+    },
+    {
+      name: 'Prioridad',
+      selector: (row) => row.prioridad,
+      sortable: true,
+      width: '125px',
+      cell: (row) => <PrioridadBadge prioridad={row.prioridad} />
+    },
+    {
+      name: 'Accion sugerida',
+      selector: (row) => row.accion,
+      minWidth: '260px',
+      grow: 2,
+      cell: (row) => (
+        <span className="text-slate-700 line-clamp-2" title={row.accion}>
+          {row.accion}
+        </span>
+      )
+    }
+  ];
+
+  const customStyles = {
+    headRow: {
+      style: {
+        backgroundColor: '#0f172a',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '13px',
+        minHeight: '46px'
+      }
+    },
+    rows: {
+      style: {
+        minHeight: '58px',
+        fontSize: '13px'
+      }
+    },
+    cells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
+      }
+    },
+    headCells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
+      }
+    }
+  };
+
   return (
-    <div className="flex bg-slate-100 min-h-screen">
-      <Sidebar />
+    <PageLayout>
+      <PageHeader
+        title="Centro de Notificaciones"
+        subtitle="Alertas operativas para inventario, pagos, embarques, aduana y documentos"
+        badge={`Alertas: ${notificaciones.length}`}
+        badgeColor={altas > 0 ? 'bg-red-600' : 'bg-green-600'}
+      />
 
-      <div className="flex-1 p-8 overflow-x-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-slate-800">
-              Notificaciones Operativas
-            </h1>
+      <AlertMessage message={error} />
 
-            <p className="text-gray-500 mt-2">
-              Alertas automaticas para inventario, pagos, embarques, aduana y documentos
-            </p>
+      <KpiGrid
+        items={[
+          { title: 'Total alertas', value: notificaciones.length, color: 'bg-blue-600' },
+          { title: 'Prioridad alta', value: altas, color: 'bg-red-600' },
+          { title: 'Prioridad media', value: medias, color: 'bg-yellow-500' },
+          { title: 'Informativas', value: bajas, color: 'bg-green-600' }
+        ]}
+      />
+
+      <SectionCard
+        title="Bandeja operativa"
+        subtitle="Filtra alertas por prioridad o busca por modulo, detalle y accion sugerida"
+        className="!mb-5"
+      >
+        <div className="flex flex-col xl:flex-row gap-4 xl:items-end">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por modulo, alerta, detalle o accion..."
+              className={inputStyle}
+            />
           </div>
 
-          <button
-            type="button"
-            onClick={obtenerDatos}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg w-fit"
-          >
-            Actualizar
-          </button>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 text-red-700 px-4 py-3 rounded-xl font-bold mb-6">
-            {error}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <KPI titulo="Total alertas" valor={notificaciones.length} color="bg-blue-600" />
-          <KPI titulo="Prioridad alta" valor={altas} color="bg-red-600" />
-          <KPI titulo="Prioridad media" valor={medias} color="bg-yellow-500" />
-          <KPI titulo="Informativas" valor={bajas} color="bg-green-600" />
-        </div>
-
-        <div className="bg-white rounded-2xl shadow p-5 mb-6">
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {['Todas', 'Alta', 'Media', 'Baja'].map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => setFiltro(item)}
                 className={`
-                  px-5
-                  py-3
-                  rounded-xl
+                  px-4
+                  py-2.5
+                  rounded-lg
                   font-bold
+                  text-sm
                   ${filtro === item
                     ? 'bg-slate-900 text-white'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}
@@ -132,24 +241,91 @@ function Notificaciones() {
                 {item}
               </button>
             ))}
+
+            <button
+              type="button"
+              onClick={obtenerDatos}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm"
+            >
+              Actualizar
+            </button>
           </div>
         </div>
+      </SectionCard>
 
-        {filtradas.length === 0 && (
-          <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-500">
-            No hay notificaciones para este filtro.
-          </div>
-        )}
+      <PanelCritico items={notificaciones.filter((item) => item.prioridad === 'Alta')} />
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {filtradas.map((item) => (
-            <NotificacionCard
-              key={item.id}
-              item={item}
-            />
-          ))}
-        </div>
+      <ExportButtons
+        data={datosExportacion}
+        fileName="notificaciones_operativas"
+      />
+
+      <DataTableCard
+        columns={columns}
+        data={filtradas}
+        noData="No hay notificaciones para este filtro"
+        fixedHeaderScrollHeight="520px"
+        selectableRows={false}
+        dense
+        customStyles={customStyles}
+      />
+    </PageLayout>
+  );
+}
+
+function PanelCritico({ items }) {
+  const destacados = items.slice(0, 3);
+
+  if (destacados.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-4 mb-5 border-l-4 border-green-600">
+        <p className="text-sm font-bold text-green-700">
+          Sin alertas criticas activas
+        </p>
+
+        <p className="text-sm text-slate-500 mt-1">
+          La operacion no registra eventos de prioridad alta en este momento.
+        </p>
       </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-5">
+      {destacados.map((item) => (
+        <div
+          key={item.id}
+          className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-red-600"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-slate-500 uppercase">
+                {item.modulo}
+              </p>
+
+              <h2 className="text-lg font-bold text-slate-800 mt-1">
+                {item.titulo}
+              </h2>
+            </div>
+
+            <PrioridadBadge prioridad={item.prioridad} />
+          </div>
+
+          <p className="text-sm text-slate-600 mt-3 line-clamp-2">
+            {item.detalle}
+          </p>
+
+          <div className="bg-slate-100 rounded-lg p-3 mt-4">
+            <p className="text-xs text-slate-500 font-bold">
+              Accion sugerida
+            </p>
+
+            <p className="text-sm text-slate-800 font-semibold mt-1">
+              {item.accion}
+            </p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -285,49 +461,6 @@ function generarNotificaciones({
   );
 }
 
-function NotificacionCard({ item }) {
-  return (
-    <div className="bg-white rounded-2xl shadow p-6 border-l-8 border-slate-300">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <p className="text-sm font-bold text-gray-500">
-            {item.modulo}
-          </p>
-
-          <h2 className="text-2xl font-bold text-slate-800 mt-1">
-            {item.titulo}
-          </h2>
-
-          <p className="text-gray-600 mt-3">
-            {item.detalle}
-          </p>
-        </div>
-
-        <PrioridadBadge prioridad={item.prioridad} />
-      </div>
-
-      <div className="bg-slate-100 rounded-xl p-4 mt-5">
-        <p className="text-sm text-gray-500 font-bold">
-          Accion sugerida
-        </p>
-
-        <p className="text-slate-800 font-semibold mt-1">
-          {item.accion}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function KPI({ titulo, valor, color }) {
-  return (
-    <div className={`${color} text-white p-6 rounded-2xl shadow-lg`}>
-      <p className="text-lg font-medium">{titulo}</p>
-      <h2 className="text-4xl font-bold mt-3">{valor}</h2>
-    </div>
-  );
-}
-
 function PrioridadBadge({ prioridad }) {
   let color = 'bg-green-600';
 
@@ -335,9 +468,11 @@ function PrioridadBadge({ prioridad }) {
   else if (prioridad === 'Media') color = 'bg-yellow-500';
 
   return (
-    <span className={`${color} text-white px-4 py-2 rounded-full text-sm font-bold w-fit`}>
-      {prioridad}
-    </span>
+    <StatusBadge
+      text={prioridad}
+      color={color}
+      minWidth="min-w-[82px]"
+    />
   );
 }
 
@@ -374,5 +509,18 @@ function formatearFecha(fecha) {
     day: '2-digit'
   });
 }
+
+const inputStyle = `
+  w-full
+  border
+  border-gray-300
+  rounded-lg
+  px-4
+  py-3
+  outline-none
+  focus:ring-2
+  focus:ring-blue-500
+  text-sm
+`;
 
 export default Notificaciones;
