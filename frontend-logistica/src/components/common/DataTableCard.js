@@ -24,7 +24,9 @@ function DataTableCard({
   noData = 'No hay registros disponibles',
   customStyles = defaultStyles,
   fixedHeader = true,
-  fixedHeaderScrollHeight = '500px'
+  fixedHeaderScrollHeight = '500px',
+  selectableRows = true,
+  dense = false
 }) {
   return (
     <div className="bg-white rounded-xl shadow-sm p-3 overflow-x-auto">
@@ -35,7 +37,8 @@ function DataTableCard({
         highlightOnHover
         striped
         responsive
-        selectableRows
+        selectableRows={selectableRows}
+        dense={dense}
         fixedHeader={fixedHeader}
         fixedHeaderScrollHeight={fixedHeaderScrollHeight}
         customStyles={customStyles}
