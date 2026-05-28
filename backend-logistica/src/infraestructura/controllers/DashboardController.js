@@ -15,6 +15,9 @@ require('../models/EmbarqueModel');
 const Pago =
 require('../models/PagoModel');
 
+const Aduana =
+require('../models/AduanaModel');
+
 const Tracking =
 require('../models/TrackingModel');
 
@@ -38,6 +41,9 @@ class DashboardController {
 
       const embarques =
         await Embarque.count();
+
+      const aduanas =
+        await Aduana.count();
 
       const productosStockBajo =
         await Producto.count({
@@ -80,6 +86,29 @@ class DashboardController {
         await Embarque.count({
           where: {
             estado: 'Retrasado'
+          }
+        });
+
+      const aduanasPendientes =
+        await Aduana.count({
+          where: {
+            estado: 'Pendiente'
+          }
+        });
+
+      const aduanasObservadas =
+        await Aduana.count({
+          where: {
+            estado: 'Observado'
+          }
+        });
+
+      const aduanasConDocumentosPendientes =
+        await Aduana.count({
+          where: {
+            documentos_pendientes: {
+              [Op.ne]: ''
+            }
           }
         });
 
@@ -128,7 +157,13 @@ class DashboardController {
 
         ordenesSinEmbarque,
 
-        embarquesRetrasados
+        embarquesRetrasados,
+
+        aduanasPendientes,
+
+        aduanasObservadas,
+
+        aduanasConDocumentosPendientes
 
       };
 
@@ -137,6 +172,9 @@ class DashboardController {
         ordenesSinPago +
         ordenesSinEmbarque +
         embarquesRetrasados +
+        aduanasPendientes +
+        aduanasObservadas +
+        aduanasConDocumentosPendientes +
         riesgoAlto;
 
       const alertasTexto =
@@ -150,6 +188,7 @@ class DashboardController {
         productos,
         ordenes,
         embarques,
+        aduanas,
 
         ia: {
 

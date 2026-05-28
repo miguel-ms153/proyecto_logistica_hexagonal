@@ -22,6 +22,8 @@ import Proveedores from './pages/Proveedores';
 
 import Pagos from './pages/Pagos';
 
+import Aduanas from './pages/Aduanas';
+
 import Tracking from './pages/Tracking';
 
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -116,6 +118,16 @@ function App() {
           element={
             <ProtectedRoute>
               <Pagos />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ADUANAS */}
+        <Route
+          path="/aduanas"
+          element={
+            <ProtectedRoute>
+              <Aduanas />
             </ProtectedRoute>
           }
         />

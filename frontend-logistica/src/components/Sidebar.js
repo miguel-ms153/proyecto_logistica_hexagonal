@@ -11,7 +11,8 @@ import {
   FaSignOutAlt,
   FaUserShield,
   FaBell,
-  FaGlobeAmericas
+  FaGlobeAmericas,
+  FaFileInvoice
 } from 'react-icons/fa';
 
 import {
@@ -277,6 +278,12 @@ function Sidebar() {
                   to="/embarques"
                   icon={<FaShippingFast />}
                   text="Embarques"
+                />
+
+                <MenuItem
+                  to="/aduanas"
+                  icon={<FaFileInvoice />}
+                  text="Aduana"
                 />
               </>
             )

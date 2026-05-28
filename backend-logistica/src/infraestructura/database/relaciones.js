@@ -5,6 +5,7 @@ const Proveedor = require('../models/ProveedorModel');
 const Pago = require('../models/PagoModel');
 const Embarque = require('../models/EmbarqueModel');
 const DetalleOrden = require('../models/DetalleOrdenModel');
+const Aduana = require('../models/AduanaModel');
 
 // =========================
 // USUARIO - ORDEN
@@ -89,6 +90,20 @@ Producto.hasMany(DetalleOrden, {
   as: 'detalles'
 });
 
+// =========================
+// ORDEN - ADUANA
+// =========================
+
+Orden.hasMany(Aduana, {
+  foreignKey: 'id_orden',
+  as: 'aduanas'
+});
+
+Aduana.belongsTo(Orden, {
+  foreignKey: 'id_orden',
+  as: 'orden'
+});
+
 module.exports = {
   Usuario,
   Orden,
@@ -96,5 +111,6 @@ module.exports = {
   Proveedor,
   Pago,
   Embarque,
-  DetalleOrden
+  DetalleOrden,
+  Aduana
 };

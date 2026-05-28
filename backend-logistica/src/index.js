@@ -41,6 +41,7 @@ app.use('/productos', require('./infraestructura/routes/productoRoutes'));
 app.use('/ordenes', require('./infraestructura/routes/ordenRoutes'));
 app.use('/proveedores', require('./infraestructura/routes/proveedorRoutes'));
 app.use('/pagos', require('./infraestructura/routes/pagoRoutes'));
+app.use('/aduanas', require('./infraestructura/routes/aduanaRoutes'));
 app.use('/auth', require('./infraestructura/routes/authRoutes'));
 app.use(
   '/detalle-orden',

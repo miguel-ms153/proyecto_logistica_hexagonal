@@ -78,7 +78,10 @@ function Dashboard() {
         stockBajo: 0,
         ordenesSinPago: 0,
         ordenesSinEmbarque: 0,
-        embarquesRetrasados: 0
+        embarquesRetrasados: 0,
+        aduanasPendientes: 0,
+        aduanasObservadas: 0,
+        aduanasConDocumentosPendientes: 0
       }
     });
 
@@ -326,6 +329,27 @@ function Dashboard() {
       descripcion: 'Embarques marcados como retrasados',
       color: 'border-purple-500',
       texto: 'text-purple-600'
+    },
+    {
+      titulo: 'Aduanas pendientes',
+      valor: datos.alertasDetalle?.aduanasPendientes || 0,
+      descripcion: 'Tramites aduaneros pendientes de gestion',
+      color: 'border-yellow-500',
+      texto: 'text-yellow-600'
+    },
+    {
+      titulo: 'Aduanas observadas',
+      valor: datos.alertasDetalle?.aduanasObservadas || 0,
+      descripcion: 'Procesos aduaneros con observaciones',
+      color: 'border-red-500',
+      texto: 'text-red-600'
+    },
+    {
+      titulo: 'Docs aduaneros',
+      valor: datos.alertasDetalle?.aduanasConDocumentosPendientes || 0,
+      descripcion: 'Tramites con documentos pendientes',
+      color: 'border-slate-500',
+      texto: 'text-slate-700'
     }
   ];
 
