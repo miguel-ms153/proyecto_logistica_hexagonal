@@ -14,7 +14,8 @@ import {
   TileLayer,
   Marker,
   Popup,
-  Polyline
+  Polyline,
+  useMap
 } from 'react-leaflet';
 
 import L from 'leaflet';
@@ -56,6 +57,7 @@ function Tracking() {
 
   const [tracking, setTracking] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
+  const [idOrdenSeleccionada, setIdOrdenSeleccionada] = useState('');
 
   const obtenerDatos = async () => {
     try {
@@ -101,30 +103,38 @@ function Tracking() {
     return trackingVisible.map((item) => analizarTracking(item));
   }, [trackingVisible]);
 
-  const centroMapa = obtenerCentroMapa(trackingAnalizado);
+  const trackingMapa = useMemo(() => {
+    if (!idOrdenSeleccionada) return trackingAnalizado;
 
-  const enTransito = trackingAnalizado.filter(
+    return trackingAnalizado.filter((item) =>
+      Number(item.id_orden) === Number(idOrdenSeleccionada)
+    );
+  }, [trackingAnalizado, idOrdenSeleccionada]);
+
+  const centroMapa = obtenerCentroMapa(trackingMapa);
+
+  const enTransito = trackingMapa.filter(
     (t) => t.estadoNormalizado === 'En tránsito'
   ).length;
 
-  const entregados = trackingAnalizado.filter(
+  const entregados = trackingMapa.filter(
     (t) => t.estadoNormalizado === 'Entregado'
   ).length;
 
-  const riesgoAlto = trackingAnalizado.filter(
+  const riesgoAlto = trackingMapa.filter(
     (t) => t.ia.riesgo === 'ALTO'
   ).length;
 
   const transportePrincipal =
-    obtenerTransportePrincipal(trackingAnalizado);
+    obtenerTransportePrincipal(trackingMapa);
 
   const promedioEta =
-    trackingAnalizado.length > 0
+    trackingMapa.length > 0
       ? Math.ceil(
-          trackingAnalizado.reduce(
+          trackingMapa.reduce(
             (acc, t) => acc + t.diasRestantes,
             0
-          ) / trackingAnalizado.length
+          ) / trackingMapa.length
         )
       : 0;
 
@@ -133,12 +143,12 @@ function Tracking() {
       <PageHeader
         title="Centro Logistico Live"
         subtitle="Seguimiento ejecutivo de carga, rutas, ETA, transporte y riesgo predictivo"
-        badge={`Cargas: ${trackingAnalizado.length}`}
+        badge={`Cargas: ${trackingMapa.length}`}
         badgeColor={riesgoAlto > 0 ? 'bg-red-600' : 'bg-blue-600'}
       />
 
       <PanelControl
-        total={trackingAnalizado.length}
+        total={trackingMapa.length}
         enTransito={enTransito}
         entregados={entregados}
         promedioEta={promedioEta}
@@ -169,6 +179,40 @@ function Tracking() {
           { title: 'Promedio ETA', value: `${promedioEta} dias`, color: 'bg-slate-800' }
         ]}
       />
+
+      <div className="bg-white rounded-xl shadow-sm p-4 mb-5">
+        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              Ver ruta por orden
+            </label>
+
+            <select
+              value={idOrdenSeleccionada}
+              onChange={(e) => setIdOrdenSeleccionada(e.target.value)}
+              className={inputStyle}
+            >
+              <option value="">Todas las ordenes</option>
+
+              {trackingAnalizado.map((item) => (
+                <option key={item._id || item.id_orden} value={item.id_orden}>
+                  Orden #{item.id_orden || 'N/A'} - {item.origen} hacia {item.destino}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {idOrdenSeleccionada && (
+            <button
+              type="button"
+              onClick={() => setIdOrdenSeleccionada('')}
+              className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-3 rounded-lg font-bold text-sm"
+            >
+              Ver todas las rutas
+            </button>
+          )}
+        </div>
+      </div>
 
         <div className="hidden">
           <KPI titulo="En tránsito" valor={enTransito} color="bg-blue-600" />
@@ -201,7 +245,9 @@ function Tracking() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {trackingAnalizado.map((t, index) => (
+            <MapFocus items={trackingMapa} />
+
+            {trackingMapa.map((t, index) => (
               <div key={t._id || index}>
                 {t.ruta.length >= 2 && (
                   <Polyline
@@ -264,7 +310,27 @@ function Tracking() {
           {trackingAnalizado.map((t, index) => (
             <div
               key={t._id || index}
-              className="bg-white rounded-xl shadow-sm p-5 border border-slate-100"
+              role="button"
+              tabIndex={0}
+              onClick={() => setIdOrdenSeleccionada(String(t.id_orden || ''))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setIdOrdenSeleccionada(String(t.id_orden || ''));
+                }
+              }}
+              className={`
+                bg-white
+                rounded-xl
+                shadow-sm
+                p-5
+                border
+                cursor-pointer
+                transition
+                hover:shadow-md
+                ${Number(idOrdenSeleccionada) === Number(t.id_orden)
+                  ? 'border-blue-600 ring-2 ring-blue-100'
+                  : 'border-slate-100'}
+              `}
             >
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-5">
                 <div>
@@ -281,6 +347,19 @@ function Tracking() {
                   <TransporteBadge tipo={t.tipoTransporte} />
                   <EstadoBadge estado={t.estadoNormalizado} />
                 </div>
+              </div>
+
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIdOrdenSeleccionada(String(t.id_orden || ''));
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm"
+                >
+                  Ver esta ruta en el mapa
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
@@ -317,11 +396,13 @@ function Tracking() {
           ))}
         </div>
 
-        {trackingAnalizado.length === 0 && (
+        {trackingMapa.length === 0 && (
           <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-500">
-            {esCliente
-              ? 'No tienes rutas de tracking disponibles para tus ordenes.'
-              : 'No hay registros de tracking disponibles.'}
+            {idOrdenSeleccionada
+              ? 'No hay tracking disponible para la orden seleccionada.'
+              : esCliente
+                ? 'No tienes rutas de tracking disponibles para tus ordenes.'
+                : 'No hay registros de tracking disponibles.'}
           </div>
         )}
     </PageLayout>
@@ -335,6 +416,30 @@ function obtenerIdUsuarioOrden(orden) {
       orden?.usuario?.id ||
       0
   );
+}
+
+function MapFocus({ items }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const puntos = items
+      .flatMap((item) => item.ruta || [])
+      .filter(Boolean);
+
+    if (puntos.length >= 2) {
+      map.fitBounds(L.latLngBounds(puntos), {
+        padding: [40, 40],
+        maxZoom: 7
+      });
+      return;
+    }
+
+    if (puntos.length === 1) {
+      map.setView(puntos[0], 6);
+    }
+  }, [items, map]);
+
+  return null;
 }
 
 function analizarTracking(t) {
@@ -716,5 +821,19 @@ function RiesgoBadge({ riesgo }) {
     />
   );
 }
+
+const inputStyle = `
+  w-full
+  border
+  border-gray-300
+  rounded-lg
+  px-4
+  py-3
+  outline-none
+  bg-white
+  focus:ring-2
+  focus:ring-blue-500
+  text-sm
+`;
 
 export default Tracking;
