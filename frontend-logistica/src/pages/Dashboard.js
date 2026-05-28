@@ -81,7 +81,10 @@ function Dashboard() {
         embarquesRetrasados: 0,
         aduanasPendientes: 0,
         aduanasObservadas: 0,
-        aduanasConDocumentosPendientes: 0
+        aduanasConDocumentosPendientes: 0,
+        documentosPendientes: 0,
+        documentosObservados: 0,
+        documentosVencidos: 0
       }
     });
 
@@ -349,6 +352,27 @@ function Dashboard() {
       valor: datos.alertasDetalle?.aduanasConDocumentosPendientes || 0,
       descripcion: 'Tramites con documentos pendientes',
       color: 'border-slate-500',
+      texto: 'text-slate-700'
+    },
+    {
+      titulo: 'Documentos pendientes',
+      valor: datos.alertasDetalle?.documentosPendientes || 0,
+      descripcion: 'Documentos requeridos sin completar',
+      color: 'border-yellow-500',
+      texto: 'text-yellow-600'
+    },
+    {
+      titulo: 'Documentos observados',
+      valor: datos.alertasDetalle?.documentosObservados || 0,
+      descripcion: 'Documentos con observaciones operativas',
+      color: 'border-red-500',
+      texto: 'text-red-600'
+    },
+    {
+      titulo: 'Documentos vencidos',
+      valor: datos.alertasDetalle?.documentosVencidos || 0,
+      descripcion: 'Documentos con fecha limite vencida',
+      color: 'border-slate-600',
       texto: 'text-slate-700'
     }
   ];

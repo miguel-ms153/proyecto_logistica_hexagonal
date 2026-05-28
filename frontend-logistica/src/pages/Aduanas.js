@@ -26,6 +26,19 @@ const regimenOptions = [
   'Exportacion'
 ];
 
+const documentoOptions = [
+  '',
+  'Factura comercial',
+  'Packing list',
+  'BL',
+  'Guia aerea',
+  'Certificado de origen',
+  'Poliza de seguro',
+  'Declaracion aduanera',
+  'Comprobante de pago',
+  'Permiso tecnico'
+];
+
 const formInicial = {
   id_orden: '',
   numero_declaracion: '',
@@ -223,6 +236,16 @@ function Aduanas() {
       cell: (row) => <EstadoBadge estado={row.estado} />
     },
     {
+      name: 'Ingreso',
+      selector: (row) => formatearFechaTabla(row.fecha_ingreso),
+      sortable: true
+    },
+    {
+      name: 'Nacionalizacion',
+      selector: (row) => formatearFechaTabla(row.fecha_nacionalizacion),
+      sortable: true
+    },
+    {
       name: 'Documentos',
       cell: (row) => (
         <span className="font-semibold text-slate-700">
@@ -389,27 +412,41 @@ function Aduanas() {
               ))}
             </select>
 
-            <input
-              type="date"
-              value={form.fecha_ingreso}
-              onChange={(e) => handleChange('fecha_ingreso', e.target.value)}
-              className={inputStyle}
-            />
+            <CampoFormulario label="Fecha de ingreso">
+              <input
+                type="date"
+                value={form.fecha_ingreso}
+                onChange={(e) => handleChange('fecha_ingreso', e.target.value)}
+                className={inputStyle}
+              />
+            </CampoFormulario>
 
-            <input
-              type="date"
-              value={form.fecha_nacionalizacion}
-              onChange={(e) => handleChange('fecha_nacionalizacion', e.target.value)}
-              className={inputStyle}
-            />
+            <CampoFormulario label="Fecha de nacionalizacion">
+              <input
+                type="date"
+                value={form.fecha_nacionalizacion}
+                onChange={(e) => handleChange('fecha_nacionalizacion', e.target.value)}
+                disabled={
+                  form.estado !== 'Nacionalizado' &&
+                  form.estado !== 'Liberado'
+                }
+                className={`${inputStyle} disabled:bg-slate-100 disabled:text-slate-400`}
+              />
+            </CampoFormulario>
 
-            <input
-              type="text"
-              placeholder="Documentos pendientes"
-              value={form.documentos_pendientes}
-              onChange={(e) => handleChange('documentos_pendientes', e.target.value)}
-              className={inputStyle}
-            />
+            <CampoFormulario label="Documento pendiente">
+              <select
+                value={form.documentos_pendientes}
+                onChange={(e) => handleChange('documentos_pendientes', e.target.value)}
+                className={inputStyle}
+              >
+                {documentoOptions.map((documento) => (
+                  <option key={documento || 'sin-documento'} value={documento}>
+                    {documento || 'Sin documentos pendientes'}
+                  </option>
+                ))}
+              </select>
+            </CampoFormulario>
           </div>
 
           <textarea
@@ -513,10 +550,32 @@ function EstadoBadge({ estado }) {
   );
 }
 
+function CampoFormulario({ label, children }) {
+  return (
+    <label className="block">
+      <span className="block text-sm font-bold text-slate-600 mb-2">
+        {label}
+      </span>
+
+      {children}
+    </label>
+  );
+}
+
 function formatearFechaInput(fecha) {
   if (!fecha) return '';
 
   return new Date(fecha).toISOString().slice(0, 10);
+}
+
+function formatearFechaTabla(fecha) {
+  if (!fecha) return 'N/A';
+
+  return new Date(fecha).toLocaleDateString('es-EC', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
 }
 
 const inputStyle = `

@@ -24,6 +24,14 @@ import Pagos from './pages/Pagos';
 
 import Aduanas from './pages/Aduanas';
 
+import Documentos from './pages/Documentos';
+
+import Trazabilidad from './pages/Trazabilidad';
+
+import Reportes from './pages/Reportes';
+
+import Bitacora from './pages/Bitacora';
+
 import Tracking from './pages/Tracking';
 
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -128,6 +136,46 @@ function App() {
           element={
             <ProtectedRoute>
               <Aduanas />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* DOCUMENTOS */}
+        <Route
+          path="/documentos"
+          element={
+            <ProtectedRoute>
+              <Documentos />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* TRAZABILIDAD */}
+        <Route
+          path="/trazabilidad"
+          element={
+            <ProtectedRoute>
+              <Trazabilidad />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* REPORTES */}
+        <Route
+          path="/reportes"
+          element={
+            <ProtectedRoute>
+              <Reportes />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* BITACORA */}
+        <Route
+          path="/bitacora"
+          element={
+            <ProtectedRoute>
+              <Bitacora />
             </ProtectedRoute>
           }
         />

@@ -17,6 +17,25 @@ API.interceptors.request.use((config) => {
 
   }
 
+  const usuario =
+  JSON.parse(
+    localStorage.getItem('usuario')
+    || '{}'
+  );
+
+  if (usuario?.nombre) {
+
+    config.headers['x-usuario-nombre'] =
+    encodeURIComponent(usuario.nombre);
+
+    config.headers['x-usuario-email'] =
+    encodeURIComponent(usuario.email || '');
+
+    config.headers['x-usuario-rol'] =
+    encodeURIComponent(usuario.rol || '');
+
+  }
+
   return config;
 
 });

@@ -18,6 +18,12 @@ require('../models/PagoModel');
 const Aduana =
 require('../models/AduanaModel');
 
+const Documento =
+require('../models/DocumentoModel');
+
+const Bitacora =
+require('../models/BitacoraModel');
+
 const Tracking =
 require('../models/TrackingModel');
 
@@ -44,6 +50,12 @@ class DashboardController {
 
       const aduanas =
         await Aduana.count();
+
+      const documentos =
+        await Documento.count();
+
+      const bitacora =
+        await Bitacora.count();
 
       const productosStockBajo =
         await Producto.count({
@@ -112,6 +124,35 @@ class DashboardController {
           }
         });
 
+      const documentosPendientes =
+        await Documento.count({
+          where: {
+            estado: 'Pendiente'
+          }
+        });
+
+      const documentosObservados =
+        await Documento.count({
+          where: {
+            estado: 'Observado'
+          }
+        });
+
+      const documentosVencidos =
+        await Documento.count({
+          where: {
+            fecha_vencimiento: {
+              [Op.lt]: new Date()
+            },
+            estado: {
+              [Op.notIn]: [
+                'Aprobado',
+                'Recibido'
+              ]
+            }
+          }
+        });
+
       const tracking =
         await Tracking.find();
 
@@ -163,7 +204,13 @@ class DashboardController {
 
         aduanasObservadas,
 
-        aduanasConDocumentosPendientes
+        aduanasConDocumentosPendientes,
+
+        documentosPendientes,
+
+        documentosObservados,
+
+        documentosVencidos
 
       };
 
@@ -175,6 +222,9 @@ class DashboardController {
         aduanasPendientes +
         aduanasObservadas +
         aduanasConDocumentosPendientes +
+        documentosPendientes +
+        documentosObservados +
+        documentosVencidos +
         riesgoAlto;
 
       const alertasTexto =
@@ -189,6 +239,8 @@ class DashboardController {
         ordenes,
         embarques,
         aduanas,
+        documentos,
+        bitacora,
 
         ia: {
 

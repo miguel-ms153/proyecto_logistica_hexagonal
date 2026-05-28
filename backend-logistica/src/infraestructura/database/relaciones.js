@@ -6,6 +6,8 @@ const Pago = require('../models/PagoModel');
 const Embarque = require('../models/EmbarqueModel');
 const DetalleOrden = require('../models/DetalleOrdenModel');
 const Aduana = require('../models/AduanaModel');
+const Documento = require('../models/DocumentoModel');
+const Bitacora = require('../models/BitacoraModel');
 
 // =========================
 // USUARIO - ORDEN
@@ -104,6 +106,30 @@ Aduana.belongsTo(Orden, {
   as: 'orden'
 });
 
+// =========================
+// DOCUMENTOS
+// =========================
+
+Orden.hasMany(Documento, {
+  foreignKey: 'id_orden',
+  as: 'documentos'
+});
+
+Documento.belongsTo(Orden, {
+  foreignKey: 'id_orden',
+  as: 'orden'
+});
+
+Aduana.hasMany(Documento, {
+  foreignKey: 'id_aduana',
+  as: 'documentos'
+});
+
+Documento.belongsTo(Aduana, {
+  foreignKey: 'id_aduana',
+  as: 'aduana'
+});
+
 module.exports = {
   Usuario,
   Orden,
@@ -112,5 +138,7 @@ module.exports = {
   Pago,
   Embarque,
   DetalleOrden,
-  Aduana
+  Aduana,
+  Documento,
+  Bitacora
 };

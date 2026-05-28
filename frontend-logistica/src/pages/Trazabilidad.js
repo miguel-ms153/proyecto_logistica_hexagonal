@@ -1,0 +1,534 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import Sidebar from '../components/Sidebar';
+
+import API from '../services/api';
+
+const estadosOrden = [
+  'Orden',
+  'Productos',
+  'Pago',
+  'Embarque',
+  'Tracking',
+  'Aduana',
+  'Documentos',
+  'Cierre'
+];
+
+function Trazabilidad() {
+  const usuarioActual =
+    JSON.parse(localStorage.getItem('usuario')) || {};
+
+  const idUsuarioActual =
+    Number(usuarioActual?.id_usuario || usuarioActual?.id);
+
+  const esCliente =
+    usuarioActual?.rol === 'CLIENTE';
+
+  const [ordenes, setOrdenes] = useState([]);
+  const [aduanas, setAduanas] = useState([]);
+  const [documentos, setDocumentos] = useState([]);
+  const [tracking, setTracking] = useState([]);
+  const [idOrdenSeleccionada, setIdOrdenSeleccionada] = useState('');
+  const [error, setError] = useState('');
+
+  const obtenerDatos = async () => {
+    try {
+      const [ordenesRes, aduanasRes, documentosRes, trackingRes] =
+        await Promise.all([
+          API.get('/ordenes'),
+          API.get('/aduanas'),
+          API.get('/documentos'),
+          API.get('/tracking')
+        ]);
+
+      setOrdenes(ordenesRes.data);
+      setAduanas(aduanasRes.data);
+      setDocumentos(documentosRes.data);
+      setTracking(trackingRes.data);
+    } catch (error) {
+      console.log(error);
+      setError('No se pudo cargar la trazabilidad');
+    }
+  };
+
+  useEffect(() => {
+    obtenerDatos();
+  }, []);
+
+  const ordenesVisibles = useMemo(() => {
+    if (!esCliente) return ordenes;
+
+    return ordenes.filter(
+      (orden) => obtenerIdUsuarioOrden(orden) === idUsuarioActual
+    );
+  }, [ordenes, esCliente, idUsuarioActual]);
+
+  useEffect(() => {
+    if (!idOrdenSeleccionada && ordenesVisibles.length > 0) {
+      setIdOrdenSeleccionada(String(ordenesVisibles[0].id_orden));
+    }
+  }, [ordenesVisibles, idOrdenSeleccionada]);
+
+  const ordenSeleccionada = ordenesVisibles.find(
+    (orden) => Number(orden.id_orden) === Number(idOrdenSeleccionada)
+  );
+
+  const resumen = useMemo(() => {
+    if (!ordenSeleccionada) return null;
+
+    const idOrden = Number(ordenSeleccionada.id_orden);
+
+    const aduanasOrden = aduanas.filter(
+      (aduana) => Number(aduana.id_orden) === idOrden
+    );
+
+    const documentosOrden = documentos.filter(
+      (documento) =>
+        Number(documento.id_orden) === idOrden ||
+        aduanasOrden.some(
+          (aduana) => Number(aduana.id_aduana) === Number(documento.id_aduana)
+        )
+    );
+
+    const trackingOrden = tracking.filter(
+      (item) => Number(item.id_orden) === idOrden
+    );
+
+    const productos = ordenSeleccionada.productos || [];
+    const pagos = ordenSeleccionada.pagos || [];
+    const embarques = ordenSeleccionada.embarques || [];
+
+    const tieneDocumentoVencido = documentosOrden.some((documento) =>
+      estaVencido(documento)
+    );
+
+    const tieneAduanaObservada = aduanasOrden.some(
+      (aduana) => aduana.estado === 'Observado'
+    );
+
+    const tieneDocumentoObservado = documentosOrden.some(
+      (documento) => documento.estado === 'Observado'
+    );
+
+    const timeline = [
+      {
+        titulo: 'Orden creada',
+        estado: ordenSeleccionada.estado || 'Pendiente',
+        detalle: `Orden #${ordenSeleccionada.id_orden}`,
+        completado: Boolean(ordenSeleccionada.id_orden),
+        alerta: false
+      },
+      {
+        titulo: 'Productos asignados',
+        estado: productos.length > 0 ? 'Completado' : 'Pendiente',
+        detalle: `${productos.length} productos asociados`,
+        completado: productos.length > 0,
+        alerta: productos.length === 0
+      },
+      {
+        titulo: 'Pago registrado',
+        estado: pagos.length > 0 ? 'Completado' : 'Pendiente',
+        detalle: `${pagos.length} pagos registrados`,
+        completado: pagos.length > 0,
+        alerta: pagos.length === 0
+      },
+      {
+        titulo: 'Embarque generado',
+        estado: embarques[0]?.estado || 'Sin embarque',
+        detalle:
+          embarques.length > 0
+            ? `${embarques[0]?.origen || 'Origen'} hacia ${embarques[0]?.destino || 'Destino'}`
+            : 'No hay embarque asociado',
+        completado: embarques.length > 0,
+        alerta: embarques.length === 0 || embarques[0]?.estado === 'Retrasado'
+      },
+      {
+        titulo: 'Tracking activo',
+        estado: trackingOrden.length > 0 ? 'Monitoreado' : 'Pendiente',
+        detalle: `${trackingOrden.length} registros de seguimiento`,
+        completado: trackingOrden.length > 0,
+        alerta: trackingOrden.length === 0
+      },
+      {
+        titulo: 'Proceso aduanero',
+        estado: aduanasOrden[0]?.estado || 'Sin tramite',
+        detalle:
+          aduanasOrden.length > 0
+            ? `${aduanasOrden.length} tramites aduaneros`
+            : 'No hay tramite aduanero',
+        completado: aduanasOrden.length > 0,
+        alerta: aduanasOrden.length === 0 || tieneAduanaObservada
+      },
+      {
+        titulo: 'Documentos',
+        estado:
+          documentosOrden.length > 0
+            ? tieneDocumentoVencido
+              ? 'Vencido'
+              : tieneDocumentoObservado
+                ? 'Observado'
+                : 'Registrado'
+            : 'Pendiente',
+        detalle: `${documentosOrden.length} documentos asociados`,
+        completado: documentosOrden.length > 0,
+        alerta:
+          documentosOrden.length === 0 ||
+          tieneDocumentoVencido ||
+          tieneDocumentoObservado
+      },
+      {
+        titulo: 'Cierre operativo',
+        estado: calcularCierre(ordenSeleccionada, aduanasOrden, documentosOrden),
+        detalle: 'Validacion final de entrega y liberacion',
+        completado:
+          ordenSeleccionada.estado === 'Entregada' &&
+          aduanasOrden.some((aduana) =>
+            ['Nacionalizado', 'Liberado'].includes(aduana.estado)
+          ) &&
+          documentosOrden.length > 0 &&
+          !tieneDocumentoVencido,
+        alerta: false
+      }
+    ];
+
+    const completados = timeline.filter((item) => item.completado).length;
+    const alertas = timeline.filter((item) => item.alerta).length;
+
+    return {
+      idOrden,
+      usuario: ordenSeleccionada.usuario,
+      productos,
+      pagos,
+      embarques,
+      aduanas: aduanasOrden,
+      documentos: documentosOrden,
+      tracking: trackingOrden,
+      timeline,
+      completados,
+      alertas,
+      avance: Math.round((completados / timeline.length) * 100)
+    };
+  }, [ordenSeleccionada, aduanas, documentos, tracking]);
+
+  return (
+    <div className="flex bg-slate-100 min-h-screen">
+      <Sidebar />
+
+      <div className="flex-1 p-8 overflow-x-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-slate-800">
+              Trazabilidad por Orden
+            </h1>
+
+            <p className="text-gray-500 mt-2">
+              Seguimiento integral desde la orden hasta la liberacion documental y aduanera
+            </p>
+          </div>
+
+          {resumen && (
+            <div className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-semibold shadow-lg w-fit">
+              Avance: {resumen.avance}%
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <div className="bg-red-100 text-red-700 px-4 py-3 rounded-xl font-bold mb-6">
+            {error}
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl shadow p-6 mb-8">
+          <label className="block text-sm font-bold text-slate-600 mb-2">
+            Seleccionar orden
+          </label>
+
+          <select
+            value={idOrdenSeleccionada}
+            onChange={(e) => setIdOrdenSeleccionada(e.target.value)}
+            className={inputStyle}
+          >
+            <option value="">Seleccionar orden</option>
+
+            {ordenesVisibles.map((orden) => (
+              <option key={orden.id_orden} value={orden.id_orden}>
+                Orden #{orden.id_orden} - {orden.usuario?.nombre || 'Sin usuario'} - {formatearFecha(orden.fecha)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {!resumen && (
+          <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-500">
+            No hay ordenes disponibles para mostrar trazabilidad.
+          </div>
+        )}
+
+        {resumen && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <KPI titulo="Etapas completadas" valor={`${resumen.completados}/${estadosOrden.length}`} color="bg-green-600" />
+              <KPI titulo="Alertas" valor={resumen.alertas} color="bg-red-600" />
+              <KPI titulo="Documentos" valor={resumen.documentos.length} color="bg-blue-600" />
+              <KPI titulo="Tracking" valor={resumen.tracking.length} color="bg-slate-800" />
+            </div>
+
+            <div className="bg-white rounded-2xl shadow p-6 mb-8">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-800">
+                    Orden #{resumen.idOrden}
+                  </h2>
+
+                  <p className="text-gray-500 mt-1">
+                    Cliente/usuario: {resumen.usuario?.nombre || 'N/A'}
+                  </p>
+                </div>
+
+                <EstadoBadge estado={ordenSeleccionada.estado || 'Pendiente'} />
+              </div>
+
+              <div className="w-full bg-slate-200 rounded-full h-4 mb-8 overflow-hidden">
+                <div
+                  className="bg-blue-600 h-4 rounded-full transition-all"
+                  style={{ width: `${resumen.avance}%` }}
+                />
+              </div>
+
+              <div className="relative">
+                <div className="hidden md:block absolute left-6 top-0 bottom-0 w-1 bg-slate-200" />
+
+                <div className="space-y-5">
+                  {resumen.timeline.map((item, index) => (
+                    <TimelineItem
+                      key={item.titulo}
+                      index={index + 1}
+                      item={item}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <ResumenPanel
+                titulo="Productos"
+                items={resumen.productos}
+                empty="Sin productos asociados"
+                render={(item) => `${item.nombre || 'Producto'} - $${Number(item.precio || 0).toFixed(2)}`}
+              />
+
+              <ResumenPanel
+                titulo="Pagos"
+                items={resumen.pagos}
+                empty="Sin pagos registrados"
+                render={(item) => `$${Number(item.monto || 0).toFixed(2)} - ${item.estado || 'Sin estado'}`}
+              />
+
+              <ResumenPanel
+                titulo="Embarques"
+                items={resumen.embarques}
+                empty="Sin embarques asociados"
+                render={(item) => `${item.origen || 'Origen'} hacia ${item.destino || 'Destino'} - ${item.estado || 'Sin estado'}`}
+              />
+
+              <ResumenPanel
+                titulo="Aduana"
+                items={resumen.aduanas}
+                empty="Sin tramite aduanero"
+                render={(item) => `${item.numero_declaracion || 'Sin declaracion'} - ${item.estado || 'Sin estado'}`}
+              />
+
+              <ResumenPanel
+                titulo="Documentos"
+                items={resumen.documentos}
+                empty="Sin documentos registrados"
+                render={(item) => `${item.nombre} - ${estaVencido(item) ? 'Vencido' : item.estado}`}
+              />
+
+              <ResumenPanel
+                titulo="Tracking"
+                items={resumen.tracking}
+                empty="Sin tracking registrado"
+                render={(item) => `${item.ubicacion || 'Ubicacion'} - ${item.estado || 'Sin estado'}`}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TimelineItem({ index, item }) {
+  let circle = 'bg-slate-400';
+  let border = 'border-slate-200';
+
+  if (item.completado) {
+    circle = 'bg-green-600';
+    border = 'border-green-500';
+  }
+
+  if (item.alerta) {
+    circle = 'bg-red-600';
+    border = 'border-red-500';
+  }
+
+  return (
+    <div className="relative md:pl-16">
+      <div className={`hidden md:flex absolute left-0 top-4 w-12 h-12 rounded-full ${circle} text-white items-center justify-center font-bold shadow-lg`}>
+        {index}
+      </div>
+
+      <div className={`border-l-8 ${border} bg-slate-50 rounded-2xl p-5 shadow-sm`}>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h3 className="text-xl font-bold text-slate-800">
+              {item.titulo}
+            </h3>
+
+            <p className="text-gray-500 mt-1">
+              {item.detalle}
+            </p>
+          </div>
+
+          <EstadoBadge estado={item.estado} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResumenPanel({ titulo, items, empty, render }) {
+  return (
+    <div className="bg-white rounded-2xl shadow p-6">
+      <h3 className="text-xl font-bold text-slate-800 mb-4">
+        {titulo}
+      </h3>
+
+      {items.length === 0 && (
+        <p className="text-gray-500">{empty}</p>
+      )}
+
+      <div className="space-y-3">
+        {items.map((item, index) => (
+          <div
+            key={item.id_documento || item.id_aduana || item.id_embarque || item.id_pago || item._id || index}
+            className="bg-slate-100 rounded-xl p-4 font-semibold text-slate-700"
+          >
+            {render(item)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function KPI({ titulo, valor, color }) {
+  return (
+    <div className={`${color} text-white p-6 rounded-2xl shadow-lg`}>
+      <p className="text-lg font-medium">{titulo}</p>
+      <h2 className="text-4xl font-bold mt-3">{valor}</h2>
+    </div>
+  );
+}
+
+function EstadoBadge({ estado }) {
+  let color = 'bg-gray-600';
+
+  if (
+    ['Entregada', 'Completado', 'Registrado', 'Monitoreado', 'Liberado', 'Nacionalizado', 'Aprobado'].includes(estado)
+  ) {
+    color = 'bg-green-600';
+  } else if (
+    ['Pendiente', 'Sin embarque', 'Sin tramite'].includes(estado)
+  ) {
+    color = 'bg-yellow-500';
+  } else if (
+    ['Observado', 'Vencido', 'Retrasado'].includes(estado)
+  ) {
+    color = 'bg-red-600';
+  } else if (
+    ['En proceso', 'En revision', 'En transito', 'En puerto'].includes(estado)
+  ) {
+    color = 'bg-blue-600';
+  }
+
+  return (
+    <span className={`${color} text-white px-4 py-2 rounded-full text-sm font-bold w-fit`}>
+      {estado || 'Sin estado'}
+    </span>
+  );
+}
+
+function calcularCierre(orden, aduanas, documentos) {
+  const aduanaCerrada = aduanas.some((aduana) =>
+    ['Nacionalizado', 'Liberado'].includes(aduana.estado)
+  );
+
+  const documentosOk =
+    documentos.length > 0 &&
+    documentos.every((documento) =>
+      ['Aprobado', 'Recibido'].includes(documento.estado) ||
+      !estaVencido(documento)
+    );
+
+  if (orden.estado === 'Entregada' && aduanaCerrada && documentosOk) {
+    return 'Completado';
+  }
+
+  return 'Pendiente';
+}
+
+function estaVencido(documento) {
+  if (!documento.fecha_vencimiento) return false;
+
+  if (
+    documento.estado === 'Aprobado' ||
+    documento.estado === 'Recibido'
+  ) {
+    return false;
+  }
+
+  const hoy = new Date();
+  const vencimiento = new Date(documento.fecha_vencimiento);
+
+  hoy.setHours(0, 0, 0, 0);
+  vencimiento.setHours(0, 0, 0, 0);
+
+  return vencimiento < hoy;
+}
+
+function obtenerIdUsuarioOrden(orden) {
+  return Number(
+    orden?.id_usuario ||
+      orden?.usuario?.id_usuario ||
+      orden?.usuario?.id ||
+      0
+  );
+}
+
+function formatearFecha(fecha) {
+  if (!fecha) return 'Sin fecha';
+
+  return new Date(fecha).toLocaleDateString('es-EC', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+}
+
+const inputStyle = `
+  w-full
+  border
+  border-gray-300
+  rounded-xl
+  p-4
+  outline-none
+  focus:ring-2
+  focus:ring-blue-500
+`;
+
+export default Trazabilidad;

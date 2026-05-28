@@ -9,6 +9,7 @@ const { Server } = require('socket.io');
 
 const sequelize = require('./infraestructura/database/mysql');
 const conectarMongo = require('./infraestructura/database/mongo');
+const auditoriaMiddleware = require('./infraestructura/middlewares/auditoriaMiddleware');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.set('io', io);
 
 app.use(cors());
 app.use(express.json());
+app.use(auditoriaMiddleware);
 
 app.use('/usuarios', require('./infraestructura/routes/usuarioRoutes'));
 app.use('/tracking', require('./infraestructura/routes/trackingRoutes'));
@@ -42,6 +44,8 @@ app.use('/ordenes', require('./infraestructura/routes/ordenRoutes'));
 app.use('/proveedores', require('./infraestructura/routes/proveedorRoutes'));
 app.use('/pagos', require('./infraestructura/routes/pagoRoutes'));
 app.use('/aduanas', require('./infraestructura/routes/aduanaRoutes'));
+app.use('/documentos', require('./infraestructura/routes/documentoRoutes'));
+app.use('/bitacora', require('./infraestructura/routes/bitacoraRoutes'));
 app.use('/auth', require('./infraestructura/routes/authRoutes'));
 app.use(
   '/detalle-orden',

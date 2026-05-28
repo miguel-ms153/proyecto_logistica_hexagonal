@@ -12,7 +12,11 @@ import {
   FaUserShield,
   FaBell,
   FaGlobeAmericas,
-  FaFileInvoice
+  FaFileInvoice,
+  FaFolderOpen,
+  FaRoute,
+  FaFileAlt,
+  FaHistory
 } from 'react-icons/fa';
 
 import {
@@ -285,6 +289,18 @@ function Sidebar() {
                   icon={<FaFileInvoice />}
                   text="Aduana"
                 />
+
+                <MenuItem
+                  to="/documentos"
+                  icon={<FaFolderOpen />}
+                  text="Documentos"
+                />
+
+                <MenuItem
+                  to="/reportes"
+                  icon={<FaFileAlt />}
+                  text="Reportes"
+                />
               </>
             )
           }
@@ -296,6 +312,13 @@ function Sidebar() {
             text="Nueva Orden"
           />
 
+          {/* TODOS LOS ROLES */}
+          <MenuItem
+            to="/trazabilidad"
+            icon={<FaRoute />}
+            text="Trazabilidad"
+          />
+
           {/* SOLO ADMIN */}
           {
             rol === 'ADMIN' && (
@@ -303,6 +326,17 @@ function Sidebar() {
                 to="/pagos"
                 icon={<FaMoneyBill />}
                 text="Pagos"
+              />
+            )
+          }
+
+          {/* SOLO ADMIN */}
+          {
+            rol === 'ADMIN' && (
+              <MenuItem
+                to="/bitacora"
+                icon={<FaHistory />}
+                text="Bitacora"
               />
             )
           }
