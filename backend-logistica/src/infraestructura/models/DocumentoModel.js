@@ -39,6 +39,26 @@ const Documento = sequelize.define(
       type: DataTypes.TEXT
     },
 
+    archivo_original: {
+      type: DataTypes.STRING
+    },
+
+    archivo_nombre: {
+      type: DataTypes.STRING
+    },
+
+    archivo_ruta: {
+      type: DataTypes.STRING
+    },
+
+    archivo_mime: {
+      type: DataTypes.STRING
+    },
+
+    archivo_tamano: {
+      type: DataTypes.INTEGER
+    },
+
     id_orden: {
       type: DataTypes.INTEGER
     },

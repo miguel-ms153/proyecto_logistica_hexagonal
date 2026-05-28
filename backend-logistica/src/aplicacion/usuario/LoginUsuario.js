@@ -71,10 +71,10 @@ class LoginUsuario {
         rol: user.rol
       },
 
-      'secreto',
+      process.env.JWT_SECRET,
 
       {
-        expiresIn: '1h'
+        expiresIn: '8h'
       }
 
     );

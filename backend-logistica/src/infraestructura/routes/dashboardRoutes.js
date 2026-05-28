@@ -7,6 +7,13 @@ express.Router();
 const DashboardController =
 require('../controllers/DashboardController');
 
+const verificarToken =
+require('../../middlewares/authMiddleware');
+
+router.use(
+  verificarToken
+);
+
 router.get(
   '/',
   DashboardController.resumen

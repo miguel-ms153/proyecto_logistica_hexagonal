@@ -5,6 +5,17 @@ const router = express.Router();
 const EmbarqueController =
 require('../controllers/EmbarqueController');
 
+const verificarToken =
+require('../../middlewares/authMiddleware');
+
+const autorizarRoles =
+require('../../middlewares/autorizarRoles');
+
+router.use(
+verificarToken,
+autorizarRoles('ADMIN', 'OPERADOR', 'CLIENTE')
+);
+
 router.post('/',
 EmbarqueController.crear);
 

@@ -110,16 +110,27 @@ function OrdenCompleta() {
   useEffect(() => {
     const obtenerDatos = async () => {
       try {
-        const [usuariosRes, productosRes] = await Promise.all([
-          API.get('/usuarios'),
-          API.get('/productos')
-        ]);
+        const productosRes =
+          await API.get('/productos');
 
-        setUsuarios(usuariosRes.data);
         setProductos(productosRes.data);
 
         if (esCliente && idUsuarioActual) {
+          setUsuarios([
+            {
+              id_usuario: idUsuarioActual,
+              nombre: usuarioActual?.nombre,
+              email: usuarioActual?.email,
+              rol: usuarioActual?.rol
+            }
+          ]);
+
           setIdUsuario(String(idUsuarioActual));
+        } else {
+          const usuariosRes =
+            await API.get('/usuarios');
+
+          setUsuarios(usuariosRes.data);
         }
       } catch (error) {
         console.log(error);
@@ -128,7 +139,13 @@ function OrdenCompleta() {
     };
 
     obtenerDatos();
-  }, [esCliente, idUsuarioActual]);
+  }, [
+    esCliente,
+    idUsuarioActual,
+    usuarioActual?.email,
+    usuarioActual?.nombre,
+    usuarioActual?.rol
+  ]);
 
   const usuarioSeleccionado = usuarios.find(
     (usuario) => Number(usuario.id_usuario) === Number(idUsuario)

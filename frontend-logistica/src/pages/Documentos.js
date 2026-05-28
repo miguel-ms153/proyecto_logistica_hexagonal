@@ -48,6 +48,7 @@ function Documentos() {
   const [busqueda, setBusqueda] = useState('');
   const [editando, setEditando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
+  const [archivo, setArchivo] = useState(null);
   const [error, setError] = useState('');
 
   const obtenerDatos = async () => {
@@ -116,7 +117,26 @@ function Documentos() {
     setForm(formInicial);
     setEditando(false);
     setIdEditando(null);
+    setArchivo(null);
     setError('');
+  };
+
+  const subirArchivo = async (idDocumento) => {
+    if (!archivo) return;
+
+    const formData = new FormData();
+
+    formData.append('archivo', archivo);
+
+    await API.post(
+      `/documentos/${idDocumento}/archivo`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
   };
 
   const guardarDocumento = async () => {
@@ -139,11 +159,23 @@ function Documentos() {
         fecha_vencimiento: form.fecha_vencimiento || null
       };
 
+      let idDocumento = idEditando;
+
       if (editando) {
-        await API.put(`/documentos/${idEditando}`, payload);
+        const res =
+          await API.put(`/documentos/${idEditando}`, payload);
+
+        idDocumento =
+          res.data?.id_documento || idEditando;
       } else {
-        await API.post('/documentos', payload);
+        const res =
+          await API.post('/documentos', payload);
+
+        idDocumento =
+          res.data?.id_documento;
       }
+
+      await subirArchivo(idDocumento);
 
       limpiarFormulario();
       obtenerDatos();
@@ -170,6 +202,7 @@ function Documentos() {
 
     setEditando(true);
     setIdEditando(documento.id_documento);
+    setArchivo(null);
     setError('');
   };
 
@@ -232,6 +265,26 @@ function Documentos() {
       name: 'Vencimiento',
       selector: (row) => formatearFechaTabla(row.fecha_vencimiento),
       sortable: true
+    },
+    {
+      name: 'Archivo',
+      cell: (row) => (
+        row.archivo_ruta ? (
+          <a
+            href={`http://localhost:3001${row.archivo_ruta}`}
+            target="_blank"
+            rel="noreferrer"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold"
+          >
+            Ver archivo
+          </a>
+        ) : (
+          <span className="text-gray-500 font-semibold">
+            Sin archivo
+          </span>
+        )
+      ),
+      grow: 2
     },
     {
       name: 'Acciones',
@@ -416,7 +469,22 @@ function Documentos() {
                 className={inputStyle}
               />
             </CampoFormulario>
+
+            <CampoFormulario label="Archivo adjunto">
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                onChange={(e) => setArchivo(e.target.files?.[0] || null)}
+                className={inputStyle}
+              />
+            </CampoFormulario>
           </div>
+
+          {archivo && (
+            <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-xl font-bold mt-5">
+              Archivo seleccionado: {archivo.name}
+            </div>
+          )}
 
           <textarea
             placeholder="Observaciones"

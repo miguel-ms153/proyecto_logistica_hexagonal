@@ -5,10 +5,21 @@ const router = express.Router();
 const controller =
 require('../controllers/UsuarioController');
 
+const verificarToken =
+require('../../middlewares/authMiddleware');
+
+const autorizarRoles =
+require('../../middlewares/autorizarRoles');
+
 // LOGIN
 router.post(
   '/login',
   controller.login
+);
+
+router.use(
+  verificarToken,
+  autorizarRoles('ADMIN')
 );
 
 // CREAR

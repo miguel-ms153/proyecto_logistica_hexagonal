@@ -4,6 +4,7 @@ require('./infraestructura/database/relaciones');
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const path = require('path');
 
 const { Server } = require('socket.io');
 
@@ -33,6 +34,12 @@ app.set('io', io);
 
 app.use(cors());
 app.use(express.json());
+app.use(
+  '/uploads',
+  express.static(
+    path.join(__dirname, '../uploads')
+  )
+);
 app.use(auditoriaMiddleware);
 
 app.use('/usuarios', require('./infraestructura/routes/usuarioRoutes'));

@@ -111,6 +111,54 @@ class DocumentoController {
 
   }
 
+  async subirArchivo(req, res) {
+
+    try {
+
+      if (!req.file) {
+
+        return res.status(400).json({
+          error: 'Debe seleccionar un archivo'
+        });
+
+      }
+
+      const archivoRuta =
+        `/uploads/documentos/${req.file.filename}`;
+
+      const result =
+      await editarDocumentoUseCase.ejecutar(
+        req.params.id,
+        {
+          archivo_original:
+            req.file.originalname,
+
+          archivo_nombre:
+            req.file.filename,
+
+          archivo_ruta:
+            archivoRuta,
+
+          archivo_mime:
+            req.file.mimetype,
+
+          archivo_tamano:
+            req.file.size
+        }
+      );
+
+      res.json(result);
+
+    } catch (error) {
+
+      res.status(500).json({
+        error: error.message
+      });
+
+    }
+
+  }
+
 }
 
 module.exports =
