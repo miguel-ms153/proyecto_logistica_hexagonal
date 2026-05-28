@@ -112,6 +112,19 @@ function Documentos() {
     estaVencido(documento)
   ).length;
 
+  const datosExportacion = filtrados.map((documento) => ({
+    ID: documento.id_documento,
+    Documento: documento.nombre || 'Sin nombre',
+    Tipo: documento.tipo || 'N/A',
+    Estado: estaVencido(documento) ? 'Vencido' : documento.estado || 'Sin estado',
+    Orden: documento.id_orden ? `#${documento.id_orden}` : 'N/A',
+    Aduana: documento.id_aduana ? `#${documento.id_aduana}` : 'N/A',
+    Emision: formatearFechaTabla(documento.fecha_emision),
+    Vence: formatearFechaTabla(documento.fecha_vencimiento),
+    Archivo: documento.archivo_ruta ? 'Adjunto' : 'Sin archivo',
+    Observaciones: resumirTexto(documento.observaciones)
+  }));
+
   const handleChange = (campo, valor) => {
     setForm({
       ...form,
@@ -230,30 +243,39 @@ function Documentos() {
       name: 'ID',
       selector: (row) => row.id_documento,
       sortable: true,
-      width: '80px'
+      width: '70px'
     },
     {
       name: 'Documento',
       selector: (row) => row.nombre,
       sortable: true,
-      grow: 2
-    },
-    {
-      name: 'Tipo',
-      selector: (row) => row.tipo,
-      sortable: true,
-      grow: 2
+      minWidth: '220px',
+      grow: 2,
+      cell: (row) => (
+        <div className="min-w-0">
+          <p className="font-bold text-slate-800 truncate" title={row.nombre}>
+            {row.nombre || 'Sin nombre'}
+          </p>
+
+          <p className="text-xs text-slate-500">
+            {row.tipo || 'Sin tipo'}
+          </p>
+        </div>
+      )
     },
     {
       name: 'Orden',
+      width: '90px',
       selector: (row) => (row.id_orden ? `#${row.id_orden}` : 'N/A')
     },
     {
       name: 'Aduana',
+      width: '95px',
       selector: (row) => (row.id_aduana ? `#${row.id_aduana}` : 'N/A')
     },
     {
       name: 'Estado',
+      width: '125px',
       cell: (row) => (
         <EstadoBadge
           estado={estaVencido(row) ? 'Vencido' : row.estado}
@@ -262,6 +284,7 @@ function Documentos() {
     },
     {
       name: 'Vencimiento',
+      width: '120px',
       selector: (row) => formatearFechaTabla(row.fecha_vencimiento),
       sortable: true
     },
@@ -273,26 +296,26 @@ function Documentos() {
             href={`http://localhost:3001${row.archivo_ruta}`}
             target="_blank"
             rel="noreferrer"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold text-xs whitespace-nowrap"
           >
             Ver archivo
           </a>
         ) : (
-          <span className="text-gray-500 font-semibold">
+          <span className="text-gray-500 font-semibold text-xs">
             Sin archivo
           </span>
         )
       ),
-      grow: 2
+      width: '115px'
     },
     {
       name: 'Acciones',
       cell: (row) => (
-        <div className="flex gap-3">
+        <div className="flex gap-2 w-full justify-end">
           <button
             type="button"
             onClick={() => editarDocumento(row)}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-3 rounded-xl font-bold min-w-[95px]"
+            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg font-bold min-w-[72px] text-xs"
           >
             Editar
           </button>
@@ -300,15 +323,45 @@ function Documentos() {
           <button
             type="button"
             onClick={() => eliminarDocumento(row.id_documento)}
-            className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-bold min-w-[105px]"
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg font-bold min-w-[80px] text-xs"
           >
             Eliminar
           </button>
         </div>
       ),
-      grow: 2
+      width: '170px'
     }
   ];
+
+  const tableStyles = {
+    headRow: {
+      style: {
+        backgroundColor: '#0f172a',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '13px',
+        minHeight: '46px'
+      }
+    },
+    rows: {
+      style: {
+        minHeight: '54px',
+        fontSize: '13px'
+      }
+    },
+    cells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
+      }
+    },
+    headCells: {
+      style: {
+        paddingLeft: '12px',
+        paddingRight: '12px'
+      }
+    }
+  };
 
   return (
     <PageLayout>
@@ -330,6 +383,7 @@ function Documentos() {
       <SectionCard
         title={editando ? 'Editar documento' : 'Nuevo documento'}
         subtitle="Registra documentos requeridos para ordenes y procesos aduaneros"
+        className="!mb-5"
       >
         {editando && (
           <div className="mb-5">
@@ -341,7 +395,7 @@ function Documentos() {
 
         <AlertMessage message={error} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <CampoFormulario label="Nombre del documento">
             <input
               type="text"
@@ -469,13 +523,16 @@ function Documentos() {
         placeholder="Buscar por documento, tipo, estado, orden o aduana..."
       />
 
-      <ExportButtons data={filtrados} fileName="documentos" />
+      <ExportButtons data={datosExportacion} fileName="documentos" />
 
       <DataTableCard
         columns={columns}
         data={filtrados}
         noData="No hay documentos registrados"
         fixedHeaderScrollHeight="520px"
+        selectableRows={false}
+        dense
+        customStyles={tableStyles}
       />
     </PageLayout>
   );
@@ -502,7 +559,13 @@ function EstadoBadge({ estado }) {
   else if (estado === 'Observado') color = 'bg-red-600';
   else if (estado === 'Vencido') color = 'bg-slate-800';
 
-  return <StatusBadge text={estado || 'Sin estado'} color={color} />;
+  return (
+    <StatusBadge
+      text={estado || 'Sin estado'}
+      color={color}
+      minWidth="min-w-[105px]"
+    />
+  );
 }
 
 function formatearFechaInput(fecha) {
@@ -521,15 +584,25 @@ function formatearFechaTabla(fecha) {
   });
 }
 
+function resumirTexto(texto) {
+  if (!texto) return 'N/A';
+
+  return texto.length > 55
+    ? `${texto.slice(0, 55)}...`
+    : texto;
+}
+
 const inputStyle = `
   w-full
   border
   border-gray-300
-  rounded-xl
-  p-4
+  rounded-lg
+  px-4
+  py-3
   outline-none
   focus:ring-2
   focus:ring-blue-500
+  text-sm
 `;
 
 export default Documentos;

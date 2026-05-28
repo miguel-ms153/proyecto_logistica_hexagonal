@@ -1,78 +1,55 @@
 import jsPDF from 'jspdf';
 
-import autoTable
-from 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export const exportarPDF = (
   datos,
   titulo = 'Reporte'
 ) => {
-
-  const doc =
-    new jsPDF();
-
-  // VALIDAR
-
-  if (
-    !datos ||
-    datos.length === 0
-  ) {
-
-    alert(
-      'No hay datos para exportar'
-    );
-
+  if (!datos || datos.length === 0) {
+    alert('No hay datos para exportar');
     return;
-
   }
 
-  // TITULO
+  const columnas = Object.keys(datos[0]);
+  const horizontal = columnas.length > 6;
 
-  doc.setFontSize(18);
-
-  doc.text(
-    titulo,
-    14,
-    20
-  );
-
-  // COLUMNAS DINÁMICAS
-
-  const columnas =
-    Object.keys(datos[0]);
-
-  // FILAS
-
-  const filas =
-    datos.map((item) =>
-
-      columnas.map(
-        (col) =>
-
-          formatearValor(
-            item[col]
-          )
-      )
-    );
-
-  // TABLA
-
-  autoTable(doc, {
-
-    startY: 30,
-
-    head: [columnas],
-
-    body: filas
-
+  const doc = new jsPDF({
+    orientation: horizontal ? 'landscape' : 'portrait'
   });
 
-  // DESCARGAR
-
-  doc.save(
-    `${titulo}.pdf`
+  const filas = datos.map((item) =>
+    columnas.map((col) => formatearValor(item[col]))
   );
 
+  doc.setFontSize(14);
+  doc.text(titulo, 10, 18);
+
+  autoTable(doc, {
+    startY: 26,
+    head: [columnas],
+    body: filas,
+    margin: {
+      left: 8,
+      right: 8
+    },
+    styles: {
+      fontSize: horizontal ? 7 : 9,
+      cellPadding: 2,
+      overflow: 'linebreak',
+      valign: 'middle'
+    },
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    alternateRowStyles: {
+      fillColor: [245, 247, 250]
+    }
+  });
+
+  doc.save(`${titulo}.pdf`);
 };
 
 function formatearValor(valor) {

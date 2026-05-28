@@ -119,6 +119,19 @@ function Aduanas() {
     (item) => item.documentos_pendientes?.trim()
   ).length;
 
+  const datosExportacion = filtrados.map((item) => ({
+    id: item.id_aduana,
+    orden: item.id_orden ? `#${item.id_orden}` : 'N/A',
+    declaracion: item.numero_declaracion || 'Sin numero',
+    regimen: item.regimen || 'N/A',
+    partida: item.partida_arancelaria || 'N/A',
+    agente: item.agente_aduanero || 'N/A',
+    estado: item.estado || 'Sin estado',
+    documentos: item.documentos_pendientes || 'Completos',
+    ingreso: formatearFechaTabla(item.fecha_ingreso),
+    nacionalizacion: formatearFechaTabla(item.fecha_nacionalizacion)
+  }));
+
   const handleChange = (campo, valor) => {
     setForm({
       ...form,
@@ -432,7 +445,7 @@ function Aduanas() {
         placeholder="Buscar por orden, declaracion, regimen, partida, agente o estado..."
       />
 
-      <ExportButtons data={filtrados} fileName="aduanas" />
+      <ExportButtons data={datosExportacion} fileName="aduanas" />
 
       <DataTableCard
         columns={columns}

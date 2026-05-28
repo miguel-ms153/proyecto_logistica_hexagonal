@@ -30,6 +30,7 @@ const transportes = [
 
 function Embarques() {
   const [embarques, setEmbarques] = useState([]);
+  const [tracking, setTracking] = useState([]);
 
   const [idOrden, setIdOrden] = useState('');
   const [origen, setOrigen] = useState('');
@@ -51,8 +52,13 @@ function Embarques() {
 
   const obtenerEmbarques = async () => {
     try {
-      const res = await API.get('/embarques');
-      setEmbarques(res.data);
+      const [embarquesRes, trackingRes] = await Promise.all([
+        API.get('/embarques'),
+        API.get('/tracking')
+      ]);
+
+      setEmbarques(embarquesRes.data);
+      setTracking(Array.isArray(trackingRes.data) ? trackingRes.data : []);
     } catch (error) {
       console.log(error);
       setError('No se pudieron cargar los embarques');
@@ -129,16 +135,18 @@ function Embarques() {
   };
 
   const editarEmbarque = (embarque) => {
+    const trackingOrden = obtenerTrackingOrden(embarque);
+
     setEditando(true);
     setEmbarqueEditando(embarque);
     setIdOrden(embarque.id_orden || '');
     setOrigen(embarque.origen || '');
     setDestino(embarque.destino || '');
     setEstado(embarque.estado || 'En camino');
-    setTipoTransporte(embarque.tipo_transporte || 'Mar\u00edtimo');
-    setUbicacion(embarque.ubicacion || embarque.origen || '');
-    setLatitud(embarque.latitud || '');
-    setLongitud(embarque.longitud || '');
+    setTipoTransporte(trackingOrden?.tipo_transporte || 'Mar\u00edtimo');
+    setUbicacion(trackingOrden?.ubicacion || embarque.origen || '');
+    setLatitud(trackingOrden?.latitud || '');
+    setLongitud(trackingOrden?.longitud || '');
     setError('');
   };
 
@@ -231,6 +239,14 @@ function Embarques() {
     embarques.map((embarque) => embarque.id_orden).filter(Boolean)
   ).size;
 
+  const obtenerTrackingOrden = (embarque) => {
+    const registros = tracking
+      .filter((item) => Number(item.id_orden) === Number(embarque.id_orden))
+      .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+
+    return registros[0] || null;
+  };
+
   const columns = [
     {
       name: 'ID',
@@ -269,10 +285,10 @@ function Embarques() {
     {
       name: 'Transporte',
       width: '125px',
-      selector: (row) => row.tipo_transporte || 'N/A',
+      selector: (row) => obtenerTrackingOrden(row)?.tipo_transporte || 'N/A',
       cell: (row) => (
         <span className="font-semibold text-slate-700 truncate block max-w-[105px]">
-          {normalizarTransporte(row.tipo_transporte)}
+          {normalizarTransporte(obtenerTrackingOrden(row)?.tipo_transporte)}
         </span>
       )
     },
@@ -286,14 +302,14 @@ function Embarques() {
     {
       name: 'Tracking',
       width: '145px',
-      selector: (row) => row.ubicacion || row.origen || 'N/A',
+      selector: (row) => obtenerTrackingOrden(row)?.ubicacion || row.origen || 'N/A',
       cell: (row) => (
         <div className="text-sm">
-          <p className="font-semibold text-slate-700 truncate max-w-[120px]" title={row.ubicacion || row.origen || 'N/A'}>
-            {row.ubicacion || row.origen || 'N/A'}
+          <p className="font-semibold text-slate-700 truncate max-w-[120px]" title={obtenerTrackingOrden(row)?.ubicacion || row.origen || 'N/A'}>
+            {obtenerTrackingOrden(row)?.ubicacion || row.origen || 'N/A'}
           </p>
           <p className="text-xs text-slate-500">
-            {row.latitud && row.longitud ? 'GPS listo' : 'Sin GPS'}
+            {obtenerTrackingOrden(row)?.latitud && obtenerTrackingOrden(row)?.longitud ? 'GPS listo' : 'Sin GPS'}
           </p>
         </div>
       )
