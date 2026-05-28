@@ -6,14 +6,14 @@ const defaultStyles = {
       backgroundColor: '#0f172a',
       color: 'white',
       fontWeight: 'bold',
-      fontSize: '15px',
-      minHeight: '62px'
+      fontSize: '14px',
+      minHeight: '52px'
     }
   },
   rows: {
     style: {
-      minHeight: '78px',
-      fontSize: '15px'
+      minHeight: '60px',
+      fontSize: '14px'
     }
   }
 };
@@ -27,7 +27,7 @@ function DataTableCard({
   fixedHeaderScrollHeight = '500px'
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow p-4 overflow-x-auto">
+    <div className="bg-white rounded-xl shadow-sm p-3 overflow-x-auto">
       <DataTable
         columns={columns}
         data={data}

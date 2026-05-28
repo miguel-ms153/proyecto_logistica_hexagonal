@@ -3,11 +3,11 @@ import { exportarPDF } from '../../utils/exportPDF';
 
 function ExportButtons({ data, fileName }) {
   return (
-    <div className="flex flex-wrap gap-4 mb-6">
+    <div className="flex flex-wrap gap-3 mb-5">
       <button
         type="button"
         onClick={() => exportarExcel(data, fileName)}
-        className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-xl font-semibold whitespace-nowrap"
+        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-semibold whitespace-nowrap text-sm"
       >
         Exportar Excel
       </button>
@@ -15,7 +15,7 @@ function ExportButtons({ data, fileName }) {
       <button
         type="button"
         onClick={() => exportarPDF(data, fileName)}
-        className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-semibold whitespace-nowrap"
+        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-semibold whitespace-nowrap text-sm"
       >
         Exportar PDF
       </button>

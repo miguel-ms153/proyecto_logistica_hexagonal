@@ -9,12 +9,12 @@ function FormActions({
   submitColor = 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300'
 }) {
   return (
-    <div className="flex flex-wrap gap-3 mt-6">
+    <div className="flex flex-wrap gap-3 mt-5">
       <button
         type="button"
         onClick={onSubmit}
         disabled={loading}
-        className={`${submitColor} text-white px-6 py-3 rounded-xl font-semibold whitespace-nowrap`}
+        className={`${submitColor} text-white px-5 py-2.5 rounded-lg font-semibold whitespace-nowrap text-sm`}
       >
         {loading ? loadingLabel : editing ? updateLabel : createLabel}
       </button>
@@ -23,7 +23,7 @@ function FormActions({
         <button
           type="button"
           onClick={onCancel}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold whitespace-nowrap"
+          className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2.5 rounded-lg font-semibold whitespace-nowrap text-sm"
         >
           Cancelar
         </button>

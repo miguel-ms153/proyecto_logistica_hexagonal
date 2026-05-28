@@ -56,14 +56,15 @@ function Sidebar() {
         duration: 0.5
       }}
       className="
-        w-72
+        w-60
+        xl:w-64
         min-h-screen
         bg-gradient-to-b
         from-slate-950
         via-slate-900
         to-slate-800
         text-white
-        p-6
+        p-4
         shadow-2xl
         flex
         flex-col
@@ -77,25 +78,25 @@ function Sidebar() {
 
         <div
           className="
-            mb-10
+            mb-6
             border-b
             border-slate-700
-            pb-6
+            pb-4
           "
         >
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
 
             <div
               className="
-                w-16
-                h-16
-                rounded-2xl
+                w-11
+                h-11
+                rounded-xl
                 bg-cyan-500
                 flex
                 items-center
                 justify-center
-                text-3xl
+                text-xl
                 shadow-xl
               "
             >
@@ -106,7 +107,7 @@ function Sidebar() {
 
               <h1
                 className="
-                  text-2xl
+                  text-xl
                   font-bold
                   text-cyan-400
                   leading-tight
@@ -115,7 +116,7 @@ function Sidebar() {
                 Logística IA
               </h1>
 
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-xs">
                 Sistema Hexagonal
               </p>
 
@@ -130,25 +131,25 @@ function Sidebar() {
         <div
           className="
             bg-slate-800
-            rounded-2xl
-            p-5
-            mb-8
+            rounded-xl
+            p-4
+            mb-5
             shadow-lg
           "
         >
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
 
             <div
               className="
-                w-14
-                h-14
+                w-11
+                h-11
                 rounded-full
                 bg-blue-600
                 flex
                 items-center
                 justify-center
-                text-xl
+                text-base
                 font-bold
                 shadow-lg
               "
@@ -162,11 +163,11 @@ function Sidebar() {
 
             <div>
 
-              <h2 className="font-bold text-lg">
+              <h2 className="font-bold text-base leading-tight">
                 {usuario?.nombre}
               </h2>
 
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-xs break-all">
                 {usuario?.email}
               </p>
 
@@ -176,11 +177,11 @@ function Sidebar() {
 
           <div
             className="
-              mt-4
+              mt-3
               bg-blue-600
-              px-4
-              py-2
-              rounded-xl
+              px-3
+              py-1.5
+              rounded-lg
               flex
               items-center
               gap-2
@@ -204,9 +205,9 @@ function Sidebar() {
           className="
             bg-orange-500
             text-white
-            p-4
-            rounded-2xl
-            mb-8
+            p-3
+            rounded-xl
+            mb-5
             shadow-lg
             flex
             items-center
@@ -214,7 +215,7 @@ function Sidebar() {
           "
         >
 
-          <FaBell className="text-2xl" />
+          <FaBell className="text-xl" />
 
           <div>
 
@@ -222,7 +223,7 @@ function Sidebar() {
               Tracking Live
             </p>
 
-            <p className="text-sm">
+            <p className="text-xs">
               Embarques monitoreados
             </p>
 
@@ -232,7 +233,7 @@ function Sidebar() {
 
         {/* MENU POR ROLES */}
 
-        <nav className="space-y-3">
+        <nav className="space-y-1.5">
 
           {/* ADMIN Y OPERADOR */}
           {
@@ -365,9 +366,9 @@ function Sidebar() {
         <div
           className="
             bg-green-600
-            rounded-2xl
-            p-4
-            mb-5
+            rounded-xl
+            p-3
+            mb-4
             shadow-lg
             flex
             items-center
@@ -383,7 +384,7 @@ function Sidebar() {
               Sistema Online
             </p>
 
-            <p className="text-sm">
+            <p className="text-xs">
               IA Operativa
             </p>
 
@@ -398,8 +399,8 @@ function Sidebar() {
             bg-red-600
             hover:bg-red-700
             transition
-            py-4
-            rounded-2xl
+            py-3
+            rounded-xl
             flex
             items-center
             justify-center
@@ -436,19 +437,21 @@ function MenuItem({
       className="
         flex
         items-center
-        gap-4
-        p-4
-        rounded-2xl
+        gap-3
+        px-3
+        py-2.5
+        rounded-xl
         hover:bg-slate-800
         transition
         text-gray-200
         font-medium
+        text-sm
         shadow-sm
         hover:shadow-lg
       "
     >
 
-      <span className="text-cyan-400 text-xl">
+      <span className="text-cyan-400 text-lg">
         {icon}
       </span>
 

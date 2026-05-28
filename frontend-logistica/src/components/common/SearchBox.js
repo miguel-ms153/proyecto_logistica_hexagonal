@@ -5,7 +5,7 @@ function SearchBox({
   focusColor = 'focus:ring-blue-500'
 }) {
   return (
-    <div className="bg-white p-5 rounded-2xl shadow mb-6">
+    <div className="bg-white p-4 rounded-xl shadow-sm mb-5">
       <input
         type="text"
         placeholder={placeholder}
@@ -16,7 +16,8 @@ function SearchBox({
           border
           border-gray-300
           rounded-xl
-          p-4
+          px-4
+          py-3
           outline-none
           bg-white
           focus:ring-2

@@ -5,7 +5,7 @@ function PageLayout({ children }) {
     <div className="flex bg-slate-100 min-h-screen">
       <Sidebar />
 
-      <main className="flex-1 p-8 overflow-x-hidden">
+      <main className="app-compact flex-1 p-4 md:p-5 xl:p-6 overflow-x-hidden">
         {children}
       </main>
     </div>
