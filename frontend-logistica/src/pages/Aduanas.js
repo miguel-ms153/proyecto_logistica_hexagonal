@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import DataTable from 'react-data-table-component';
-
-import Sidebar from '../components/Sidebar';
-
 import API from '../services/api';
 
-import { exportarExcel } from '../utils/exportExcel';
-import { exportarPDF } from '../utils/exportPDF';
+import AlertMessage from '../components/common/AlertMessage';
+import DataTableCard from '../components/common/DataTableCard';
+import ExportButtons from '../components/common/ExportButtons';
+import FormActions from '../components/common/FormActions';
+import KpiGrid from '../components/common/KpiGrid';
+import PageHeader from '../components/common/PageHeader';
+import PageLayout from '../components/common/PageLayout';
+import SearchBox from '../components/common/SearchBox';
+import SectionCard from '../components/common/SectionCard';
+import StatusBadge from '../components/common/StatusBadge';
 
 const estadoOptions = [
   'Pendiente',
@@ -138,16 +142,10 @@ function Aduanas() {
     try {
       const payload = {
         ...form,
-        id_orden: Number(form.id_orden)
+        id_orden: Number(form.id_orden),
+        fecha_ingreso: form.fecha_ingreso || null,
+        fecha_nacionalizacion: form.fecha_nacionalizacion || null
       };
-
-      if (!payload.fecha_ingreso) {
-        payload.fecha_ingreso = null;
-      }
-
-      if (!payload.fecha_nacionalizacion) {
-        payload.fecha_nacionalizacion = null;
-      }
 
       if (editando) {
         await API.put(`/aduanas/${idEditando}`, payload);
@@ -159,9 +157,10 @@ function Aduanas() {
       obtenerDatos();
     } catch (error) {
       console.log(error);
+
       setError(
         error.response?.data?.error ||
-          'No se pudo guardar el tramite aduanero'
+        'No se pudo guardar el tramite aduanero'
       );
     }
   };
@@ -279,257 +278,169 @@ function Aduanas() {
     }
   ];
 
-  const customStyles = {
-    headRow: {
-      style: {
-        backgroundColor: '#0f172a',
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: '15px'
-      }
-    },
-    rows: {
-      style: {
-        minHeight: '72px',
-        fontSize: '15px'
-      }
-    }
-  };
-
   return (
-    <div className="flex bg-slate-100 min-h-screen">
-      <Sidebar />
+    <PageLayout>
+      <PageHeader
+        title="Gestion Aduanera"
+        subtitle="Control de nacionalizacion, documentos y procesos de comercio exterior"
+        badge={`Total: ${aduanas.length}`}
+      />
 
-      <div className="flex-1 p-8 overflow-x-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-slate-800">
-              Gestion Aduanera
-            </h1>
+      <KpiGrid
+        items={[
+          { title: 'Pendientes', value: pendientes, color: 'bg-yellow-500' },
+          { title: 'Observados', value: observados, color: 'bg-red-600' },
+          { title: 'Liberados', value: liberados, color: 'bg-green-600' },
+          { title: 'Docs pendientes', value: documentosPendientes, color: 'bg-slate-800' }
+        ]}
+      />
 
-            <p className="text-gray-500 mt-2">
-              Control de nacionalizacion, documentos y procesos de comercio exterior
-            </p>
+      <SectionCard
+        title={editando ? 'Editar tramite aduanero' : 'Nuevo tramite aduanero'}
+        subtitle="Asocia una orden y registra su estado aduanero"
+      >
+        {editando && (
+          <div className="mb-5">
+            <span className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-xl font-bold w-fit">
+              Modo edicion
+            </span>
           </div>
+        )}
 
-          <div className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-semibold shadow-lg w-fit">
-            Total: {aduanas.length}
-          </div>
-        </div>
+        <AlertMessage message={error} />
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <KPI titulo="Pendientes" valor={pendientes} color="bg-yellow-500" />
-          <KPI titulo="Observados" valor={observados} color="bg-red-600" />
-          <KPI titulo="Liberados" valor={liberados} color="bg-green-600" />
-          <KPI titulo="Docs pendientes" valor={documentosPendientes} color="bg-slate-800" />
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <select
+            value={form.id_orden}
+            onChange={(e) => handleChange('id_orden', e.target.value)}
+            className={inputStyle}
+          >
+            <option value="">Seleccionar orden</option>
 
-        <div className="bg-white rounded-2xl shadow p-6 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800">
-                {editando ? 'Editar tramite aduanero' : 'Nuevo tramite aduanero'}
-              </h2>
+            {ordenes.map((orden) => (
+              <option key={orden.id_orden} value={orden.id_orden}>
+                Orden #{orden.id_orden} - {orden.usuario?.nombre || 'Sin usuario'}
+              </option>
+            ))}
+          </select>
 
-              <p className="text-gray-500 mt-1">
-                Asocia una orden y registra su estado aduanero
-              </p>
-            </div>
-
-            {editando && (
-              <span className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-xl font-bold w-fit">
-                Modo edicion
-              </span>
-            )}
-          </div>
-
-          {error && (
-            <div className="bg-red-100 text-red-700 px-4 py-3 rounded-xl font-bold mb-5">
-              {error}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            <select
-              value={form.id_orden}
-              onChange={(e) => handleChange('id_orden', e.target.value)}
-              className={inputStyle}
-            >
-              <option value="">Seleccionar orden</option>
-
-              {ordenes.map((orden) => (
-                <option key={orden.id_orden} value={orden.id_orden}>
-                  Orden #{orden.id_orden} - {orden.usuario?.nombre || 'Sin usuario'}
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="text"
-              placeholder="Numero de declaracion"
-              value={form.numero_declaracion}
-              onChange={(e) => handleChange('numero_declaracion', e.target.value)}
-              className={inputStyle}
-            />
-
-            <select
-              value={form.regimen}
-              onChange={(e) => handleChange('regimen', e.target.value)}
-              className={inputStyle}
-            >
-              {regimenOptions.map((regimen) => (
-                <option key={regimen} value={regimen}>
-                  {regimen}
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="text"
-              placeholder="Partida arancelaria"
-              value={form.partida_arancelaria}
-              onChange={(e) => handleChange('partida_arancelaria', e.target.value)}
-              className={inputStyle}
-            />
-
-            <input
-              type="text"
-              placeholder="Agente aduanero"
-              value={form.agente_aduanero}
-              onChange={(e) => handleChange('agente_aduanero', e.target.value)}
-              className={inputStyle}
-            />
-
-            <select
-              value={form.estado}
-              onChange={(e) => handleChange('estado', e.target.value)}
-              className={inputStyle}
-            >
-              {estadoOptions.map((estado) => (
-                <option key={estado} value={estado}>
-                  {estado}
-                </option>
-              ))}
-            </select>
-
-            <CampoFormulario label="Fecha de ingreso">
-              <input
-                type="date"
-                value={form.fecha_ingreso}
-                onChange={(e) => handleChange('fecha_ingreso', e.target.value)}
-                className={inputStyle}
-              />
-            </CampoFormulario>
-
-            <CampoFormulario label="Fecha de nacionalizacion">
-              <input
-                type="date"
-                value={form.fecha_nacionalizacion}
-                onChange={(e) => handleChange('fecha_nacionalizacion', e.target.value)}
-                disabled={
-                  form.estado !== 'Nacionalizado' &&
-                  form.estado !== 'Liberado'
-                }
-                className={`${inputStyle} disabled:bg-slate-100 disabled:text-slate-400`}
-              />
-            </CampoFormulario>
-
-            <CampoFormulario label="Documento pendiente">
-              <select
-                value={form.documentos_pendientes}
-                onChange={(e) => handleChange('documentos_pendientes', e.target.value)}
-                className={inputStyle}
-              >
-                {documentoOptions.map((documento) => (
-                  <option key={documento || 'sin-documento'} value={documento}>
-                    {documento || 'Sin documentos pendientes'}
-                  </option>
-                ))}
-              </select>
-            </CampoFormulario>
-          </div>
-
-          <textarea
-            placeholder="Observaciones"
-            value={form.observaciones}
-            onChange={(e) => handleChange('observaciones', e.target.value)}
-            className={`${inputStyle} mt-5 min-h-[105px]`}
-          />
-
-          <div className="flex flex-wrap gap-3 mt-5">
-            <button
-              type="button"
-              onClick={guardarAduana}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold"
-            >
-              {editando ? 'Actualizar tramite' : 'Crear tramite'}
-            </button>
-
-            {editando && (
-              <button
-                type="button"
-                onClick={limpiarFormulario}
-                className="bg-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold"
-              >
-                Cancelar
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow p-5 mb-6">
           <input
             type="text"
-            placeholder="Buscar por orden, declaracion, regimen, partida, agente o estado..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Numero de declaracion"
+            value={form.numero_declaracion}
+            onChange={(e) => handleChange('numero_declaracion', e.target.value)}
             className={inputStyle}
           />
-        </div>
 
-        <div className="flex flex-wrap gap-4 mb-6">
-          <button
-            type="button"
-            onClick={() => exportarExcel(aduanas, 'aduanas')}
-            className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-xl font-bold"
+          <select
+            value={form.regimen}
+            onChange={(e) => handleChange('regimen', e.target.value)}
+            className={inputStyle}
           >
-            Exportar Excel
-          </button>
+            {regimenOptions.map((regimen) => (
+              <option key={regimen} value={regimen}>
+                {regimen}
+              </option>
+            ))}
+          </select>
 
-          <button
-            type="button"
-            onClick={() => exportarPDF(aduanas, 'aduanas')}
-            className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-bold"
-          >
-            Exportar PDF
-          </button>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow p-4">
-          <DataTable
-            columns={columns}
-            data={filtrados}
-            pagination
-            responsive
-            striped
-            highlightOnHover
-            selectableRows
-            fixedHeader
-            fixedHeaderScrollHeight="520px"
-            customStyles={customStyles}
+          <input
+            type="text"
+            placeholder="Partida arancelaria"
+            value={form.partida_arancelaria}
+            onChange={(e) => handleChange('partida_arancelaria', e.target.value)}
+            className={inputStyle}
           />
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function KPI({ titulo, valor, color }) {
-  return (
-    <div className={`${color} text-white p-6 rounded-2xl shadow-lg`}>
-      <p className="text-lg font-medium">{titulo}</p>
-      <h2 className="text-4xl font-bold mt-3">{valor}</h2>
-    </div>
+          <input
+            type="text"
+            placeholder="Agente aduanero"
+            value={form.agente_aduanero}
+            onChange={(e) => handleChange('agente_aduanero', e.target.value)}
+            className={inputStyle}
+          />
+
+          <select
+            value={form.estado}
+            onChange={(e) => handleChange('estado', e.target.value)}
+            className={inputStyle}
+          >
+            {estadoOptions.map((estado) => (
+              <option key={estado} value={estado}>
+                {estado}
+              </option>
+            ))}
+          </select>
+
+          <CampoFormulario label="Fecha de ingreso">
+            <input
+              type="date"
+              value={form.fecha_ingreso}
+              onChange={(e) => handleChange('fecha_ingreso', e.target.value)}
+              className={inputStyle}
+            />
+          </CampoFormulario>
+
+          <CampoFormulario label="Fecha de nacionalizacion">
+            <input
+              type="date"
+              value={form.fecha_nacionalizacion}
+              onChange={(e) => handleChange('fecha_nacionalizacion', e.target.value)}
+              disabled={
+                form.estado !== 'Nacionalizado' &&
+                form.estado !== 'Liberado'
+              }
+              className={`${inputStyle} disabled:bg-slate-100 disabled:text-slate-400`}
+            />
+          </CampoFormulario>
+
+          <CampoFormulario label="Documento pendiente">
+            <select
+              value={form.documentos_pendientes}
+              onChange={(e) => handleChange('documentos_pendientes', e.target.value)}
+              className={inputStyle}
+            >
+              {documentoOptions.map((documento) => (
+                <option key={documento || 'sin-documento'} value={documento}>
+                  {documento || 'Sin documentos pendientes'}
+                </option>
+              ))}
+            </select>
+          </CampoFormulario>
+        </div>
+
+        <textarea
+          placeholder="Observaciones"
+          value={form.observaciones}
+          onChange={(e) => handleChange('observaciones', e.target.value)}
+          className={`${inputStyle} mt-5 min-h-[105px]`}
+        />
+
+        <FormActions
+          loading={false}
+          editing={editando}
+          createLabel="Crear tramite"
+          updateLabel="Actualizar tramite"
+          onSubmit={guardarAduana}
+          onCancel={limpiarFormulario}
+        />
+      </SectionCard>
+
+      <SearchBox
+        value={busqueda}
+        onChange={setBusqueda}
+        placeholder="Buscar por orden, declaracion, regimen, partida, agente o estado..."
+      />
+
+      <ExportButtons data={filtrados} fileName="aduanas" />
+
+      <DataTableCard
+        columns={columns}
+        data={filtrados}
+        noData="No hay tramites aduaneros registrados"
+        fixedHeaderScrollHeight="520px"
+      />
+    </PageLayout>
   );
 }
 
@@ -543,11 +454,7 @@ function EstadoBadge({ estado }) {
   else if (estado === 'Nacionalizado') color = 'bg-green-600';
   else if (estado === 'Liberado') color = 'bg-emerald-600';
 
-  return (
-    <span className={`${color} text-white px-4 py-2 rounded-full text-sm font-bold w-fit`}>
-      {estado || 'Sin estado'}
-    </span>
-  );
+  return <StatusBadge text={estado || 'Sin estado'} color={color} />;
 }
 
 function CampoFormulario({ label, children }) {
