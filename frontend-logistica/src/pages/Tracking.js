@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import Sidebar from '../components/Sidebar';
-
 import API from '../services/api';
 
 import socket from '../services/socket';
+
+import KpiGrid from '../components/common/KpiGrid';
+import PageHeader from '../components/common/PageHeader';
+import PageLayout from '../components/common/PageLayout';
+import StatusBadge from '../components/common/StatusBadge';
 
 import {
   MapContainer,
@@ -104,9 +107,16 @@ function Tracking() {
     (t) => t.estadoNormalizado === 'En tránsito'
   ).length;
 
+  const entregados = trackingAnalizado.filter(
+    (t) => t.estadoNormalizado === 'Entregado'
+  ).length;
+
   const riesgoAlto = trackingAnalizado.filter(
     (t) => t.ia.riesgo === 'ALTO'
   ).length;
+
+  const transportePrincipal =
+    obtenerTransportePrincipal(trackingAnalizado);
 
   const promedioEta =
     trackingAnalizado.length > 0
@@ -119,11 +129,23 @@ function Tracking() {
       : 0;
 
   return (
-    <div className="flex bg-slate-100 min-h-screen">
-      <Sidebar />
+    <PageLayout>
+      <PageHeader
+        title="Centro Logistico Live"
+        subtitle="Seguimiento ejecutivo de carga, rutas, ETA, transporte y riesgo predictivo"
+        badge={`Cargas: ${trackingAnalizado.length}`}
+        badgeColor={riesgoAlto > 0 ? 'bg-red-600' : 'bg-blue-600'}
+      />
 
-      <div className="flex-1 p-8 overflow-x-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
+      <PanelControl
+        total={trackingAnalizado.length}
+        enTransito={enTransito}
+        entregados={entregados}
+        promedioEta={promedioEta}
+        transportePrincipal={transportePrincipal}
+      />
+
+      <div className="hidden">
           <div>
             <h1 className="text-4xl font-bold text-slate-800">
               Tracking GPS Live
@@ -139,20 +161,39 @@ function Tracking() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <KpiGrid
+        items={[
+          { title: 'En transito', value: enTransito, color: 'bg-blue-600' },
+          { title: 'Entregados', value: entregados, color: 'bg-green-600' },
+          { title: 'Riesgo alto', value: riesgoAlto, color: 'bg-red-600' },
+          { title: 'Promedio ETA', value: `${promedioEta} dias`, color: 'bg-slate-800' }
+        ]}
+      />
+
+        <div className="hidden">
           <KPI titulo="En tránsito" valor={enTransito} color="bg-blue-600" />
           <KPI titulo="Riesgo alto" valor={riesgoAlto} color="bg-red-600" />
           <KPI titulo="Promedio ETA" valor={`${promedioEta} días`} color="bg-green-600" />
         </div>
 
-        <div className="bg-white rounded-2xl shadow p-4 mb-8">
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-5">
+          <div className="mb-4">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-800">
+              Mapa operativo global
+            </h2>
+
+            <p className="text-sm text-gray-500 mt-1">
+              Visualiza origen, ubicacion actual, destino y ruta estimada de cada carga.
+            </p>
+          </div>
+
           <MapContainer
             center={centroMapa}
             zoom={3}
             style={{
-              height: '520px',
+              height: '560px',
               width: '100%',
-              borderRadius: '16px'
+              borderRadius: '12px'
             }}
           >
             <TileLayer
@@ -219,15 +260,15 @@ function Tracking() {
           </MapContainer>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
           {trackingAnalizado.map((t, index) => (
             <div
               key={t._id || index}
-              className="bg-white rounded-2xl shadow p-6"
+              className="bg-white rounded-xl shadow-sm p-5 border border-slate-100"
             >
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-5">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-800">
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-800">
                     Orden #{t.id_orden || 'N/A'}
                   </h2>
 
@@ -242,7 +283,7 @@ function Tracking() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
                 <Info label="Ubicación actual" value={t.ubicacion} />
                 <Info label="Tipo de transporte" value={t.tipoTransporte} />
                 <Info label="Distancia restante" value={`${t.distanciaKm} km`} />
@@ -251,7 +292,7 @@ function Tracking() {
                 <Info label="Entrega estimada" value={t.fechaEstimada} />
               </div>
 
-              <div className="bg-slate-900 text-white rounded-2xl p-5">
+              <div className="bg-slate-900 text-white rounded-xl p-5">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
                   <div>
                     <h3 className="text-xl font-bold">
@@ -266,7 +307,7 @@ function Tracking() {
                   <RiesgoBadge riesgo={t.ia.riesgo} />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <InfoDark label="Probabilidad" value={t.ia.probabilidad} />
                   <InfoDark label="Impacto" value={t.ia.impacto} />
                   <InfoDark label="Acción sugerida" value={t.ia.recomendacion} />
@@ -283,8 +324,7 @@ function Tracking() {
               : 'No hay registros de tracking disponibles.'}
           </div>
         )}
-      </div>
-    </div>
+    </PageLayout>
   );
 }
 
@@ -530,6 +570,19 @@ function obtenerCentroMapa(items) {
   return itemConCoordenadas?.actualCoords || [-2.1709, -79.9224];
 }
 
+function obtenerTransportePrincipal(items) {
+  if (items.length === 0) return 'Sin datos';
+
+  const conteo = {};
+
+  items.forEach((item) => {
+    conteo[item.tipoTransporte] = (conteo[item.tipoTransporte] || 0) + 1;
+  });
+
+  return Object.entries(conteo)
+    .sort((a, b) => b[1] - a[1])[0][0];
+}
+
 function obtenerColorRuta(tipoTransporte, riesgo) {
   if (riesgo === 'ALTO') return '#dc2626';
   if (tipoTransporte === 'Aéreo') return '#7c3aed';
@@ -537,6 +590,55 @@ function obtenerColorRuta(tipoTransporte, riesgo) {
   if (tipoTransporte === 'Terrestre') return '#16a34a';
 
   return '#2563eb';
+}
+
+function PanelControl({
+  total,
+  enTransito,
+  entregados,
+  promedioEta,
+  transportePrincipal
+}) {
+  return (
+    <div className="bg-slate-900 text-white rounded-2xl p-5 md:p-6 shadow-lg mb-5">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+        <div>
+          <p className="text-blue-200 text-sm font-bold uppercase tracking-wide">
+            Torre de control logistica
+          </p>
+
+          <h2 className="text-3xl md:text-4xl font-bold mt-2">
+            {total} cargas monitoreadas
+          </h2>
+
+          <p className="text-slate-300 mt-2">
+            Informacion de ruta, estado, ETA y riesgo para decisiones operativas.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 w-full xl:w-auto">
+          <ControlMetric title="En transito" value={enTransito} />
+          <ControlMetric title="Entregadas" value={entregados} />
+          <ControlMetric title="ETA promedio" value={`${promedioEta} dias`} />
+          <ControlMetric title="Transporte" value={transportePrincipal} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ControlMetric({ title, value }) {
+  return (
+    <div className="bg-white/10 border border-white/10 rounded-xl p-4 min-w-[140px]">
+      <p className="text-xs text-slate-300 font-bold uppercase">
+        {title}
+      </p>
+
+      <p className="text-xl font-bold mt-1 truncate" title={String(value)}>
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function KPI({ titulo, valor, color }) {
@@ -551,18 +653,18 @@ function KPI({ titulo, valor, color }) {
 
 function Info({ label, value }) {
   return (
-    <div className="border border-gray-200 rounded-xl p-4">
-      <p className="text-sm text-gray-500">{label}</p>
+    <div className="border border-gray-200 rounded-lg p-3 bg-slate-50">
+      <p className="text-xs text-gray-500 font-bold uppercase">{label}</p>
 
-      <p className="text-lg font-bold text-slate-800 mt-1">{value}</p>
+      <p className="text-base font-bold text-slate-800 mt-1">{value}</p>
     </div>
   );
 }
 
 function InfoDark({ label, value }) {
   return (
-    <div className="bg-slate-800 rounded-xl p-4">
-      <p className="text-sm text-slate-400">{label}</p>
+    <div className="bg-slate-800 rounded-lg p-4">
+      <p className="text-xs text-slate-400 font-bold uppercase">{label}</p>
 
       <p className="text-base font-bold mt-1">{value}</p>
     </div>
@@ -576,9 +678,11 @@ function EstadoBadge({ estado }) {
   else if (estado === 'Retrasado') color = 'bg-red-600';
 
   return (
-    <span className={`${color} text-white px-4 py-2 rounded-full text-sm font-semibold w-fit`}>
-      {estado}
-    </span>
+    <StatusBadge
+      text={estado}
+      color={color}
+      minWidth="min-w-[105px]"
+    />
   );
 }
 
@@ -590,9 +694,11 @@ function TransporteBadge({ tipo }) {
   else if (tipo === 'Marítimo') color = 'bg-blue-600';
 
   return (
-    <span className={`${color} text-white px-4 py-2 rounded-full text-sm font-semibold w-fit`}>
-      {tipo}
-    </span>
+    <StatusBadge
+      text={tipo}
+      color={color}
+      minWidth="min-w-[105px]"
+    />
   );
 }
 
@@ -603,9 +709,11 @@ function RiesgoBadge({ riesgo }) {
   else if (riesgo === 'MEDIO') color = 'bg-yellow-500';
 
   return (
-    <span className={`${color} text-white px-4 py-2 rounded-full text-sm font-bold w-fit`}>
-      Riesgo {riesgo}
-    </span>
+    <StatusBadge
+      text={`Riesgo ${riesgo}`}
+      color={color}
+      minWidth="min-w-[115px]"
+    />
   );
 }
 
