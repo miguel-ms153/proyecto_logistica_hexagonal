@@ -9,6 +9,11 @@ import API from '../services/api';
 import { exportarExcel } from '../utils/exportExcel';
 import { exportarPDF } from '../utils/exportPDF';
 
+import {
+  calcularScoreRiesgo,
+  estaVencido
+} from '../utils/riskScoring';
+
 function Reportes() {
   const [ordenes, setOrdenes] = useState([]);
   const [pagos, setPagos] = useState([]);
@@ -16,7 +21,6 @@ function Reportes() {
   const [aduanas, setAduanas] = useState([]);
   const [documentos, setDocumentos] = useState([]);
   const [productos, setProductos] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [error, setError] = useState('');
@@ -29,16 +33,14 @@ function Reportes() {
         embarquesRes,
         aduanasRes,
         documentosRes,
-        productosRes,
-        usuariosRes
+        productosRes
       ] = await Promise.all([
         API.get('/ordenes'),
         API.get('/pagos'),
         API.get('/embarques'),
         API.get('/aduanas'),
         API.get('/documentos'),
-        API.get('/productos'),
-        API.get('/usuarios')
+        API.get('/productos')
       ]);
 
       setOrdenes(ordenesRes.data);
@@ -47,7 +49,6 @@ function Reportes() {
       setAduanas(aduanasRes.data);
       setDocumentos(documentosRes.data);
       setProductos(productosRes.data);
-      setUsuarios(usuariosRes.data);
     } catch (error) {
       console.log(error);
       setError('No se pudieron cargar los reportes gerenciales');
@@ -115,7 +116,7 @@ function Reportes() {
       estaVencido(documento)
     ).length;
 
-    const clientesRanking = generarRankingClientes(ordenesFiltradas, usuarios);
+    const clientesRanking = generarRankingClientes(ordenesFiltradas);
     const productosRanking = generarRankingProductos(ordenesFiltradas, productos);
     const estadosOrden = generarConteoPorCampo(ordenesFiltradas, 'estado');
     const estadosDocumentos = generarConteoPorCampo(documentosPorOrden, 'estado');
@@ -133,6 +134,21 @@ function Reportes() {
         (aduana) => Number(aduana.id_orden) === Number(orden.id_orden)
       );
 
+      const documentosOrden =
+        documentosPorOrden.filter(
+          (documento) => Number(documento.id_orden) === Number(orden.id_orden)
+        );
+
+      const riesgo =
+        calcularScoreRiesgo({
+          orden,
+          pagos: pagosOrden,
+          embarques: embarquesOrden,
+          aduanas: aduanasOrden,
+          documentos: documentosOrden,
+          tracking: []
+        });
+
       return {
         orden: orden.id_orden,
         usuario: orden.usuario?.nombre || 'N/A',
@@ -145,11 +161,22 @@ function Reportes() {
         ),
         embarques: embarquesOrden.length,
         aduanas: aduanasOrden.length,
-        documentos: documentosPorOrden.filter(
-          (documento) => Number(documento.id_orden) === Number(orden.id_orden)
-        ).length
+        documentos: documentosOrden.length,
+        riesgo: riesgo.nivel,
+        score: riesgo.score,
+        recomendacion_ia: riesgo.recomendacion
       };
     });
+
+    const scorePromedio =
+      resumenExportable.length > 0
+        ? Math.round(
+            resumenExportable.reduce(
+              (acc, item) => acc + Number(item.score || 0),
+              0
+            ) / resumenExportable.length
+          )
+        : 0;
 
     return {
       ordenesFiltradas,
@@ -167,9 +194,10 @@ function Reportes() {
       productosRanking,
       estadosOrden,
       estadosDocumentos,
-      resumenExportable
+      resumenExportable,
+      scorePromedio
     };
-  }, [ordenes, pagos, embarques, aduanas, documentos, productos, usuarios, desde, hasta]);
+  }, [ordenes, pagos, embarques, aduanas, documentos, productos, desde, hasta]);
 
   const columns = [
     {
@@ -212,6 +240,11 @@ function Reportes() {
     {
       name: 'Docs',
       selector: (row) => row.documentos
+    },
+    {
+      name: 'Riesgo IA',
+      cell: (row) => <RiesgoBadge nivel={row.riesgo} score={row.score} />,
+      grow: 2
     }
   ];
 
@@ -298,13 +331,13 @@ function Reportes() {
           <KPI titulo="Valor pagado" valor={`$${reporte.valorPagado.toFixed(2)}`} color="bg-green-600" />
           <KPI titulo="Pagos pendientes" valor={reporte.pagosPendientes} color="bg-yellow-500" />
           <KPI titulo="Embarques retrasados" valor={reporte.embarquesRetrasados} color="bg-red-600" />
-          <KPI titulo="Docs vencidos" valor={reporte.documentosVencidos} color="bg-slate-800" />
+          <KPI titulo="Score promedio IA" valor={`${reporte.scorePromedio}/100`} color={obtenerColorRiesgoScore(reporte.scorePromedio)} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <KPI titulo="Aduanas observadas" valor={reporte.aduanasObservadas} color="bg-purple-600" />
           <KPI titulo="Docs pendientes" valor={reporte.documentosPendientes} color="bg-blue-600" />
-          <KPI titulo="Documentos filtrados" valor={reporte.documentosPorOrden.length} color="bg-indigo-600" />
+          <KPI titulo="Docs vencidos" valor={reporte.documentosVencidos} color="bg-slate-800" />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
@@ -486,13 +519,12 @@ function crearFechaLocal(value) {
   return new Date(year, month - 1, day);
 }
 
-function generarRankingClientes(ordenes, usuarios) {
+function generarRankingClientes(ordenes) {
   const conteo = {};
 
   ordenes.forEach((orden) => {
     const nombre =
       orden.usuario?.nombre ||
-      usuarios.find((usuario) => Number(usuario.id_usuario) === Number(orden.id_usuario))?.nombre ||
       'Sin usuario';
 
     conteo[nombre] = (conteo[nombre] || 0) + 1;
@@ -541,25 +573,6 @@ function convertirConteoEnRanking(conteo) {
     .sort((a, b) => b.total - a.total);
 }
 
-function estaVencido(documento) {
-  if (!documento.fecha_vencimiento) return false;
-
-  if (
-    documento.estado === 'Aprobado' ||
-    documento.estado === 'Recibido'
-  ) {
-    return false;
-  }
-
-  const hoy = new Date();
-  const vencimiento = new Date(documento.fecha_vencimiento);
-
-  hoy.setHours(0, 0, 0, 0);
-  vencimiento.setHours(0, 0, 0, 0);
-
-  return vencimiento < hoy;
-}
-
 function formatearFecha(fecha) {
   if (!fecha) return 'N/A';
 
@@ -568,6 +581,28 @@ function formatearFecha(fecha) {
     month: '2-digit',
     day: '2-digit'
   });
+}
+
+function RiesgoBadge({ nivel, score }) {
+  return (
+    <span className={`${obtenerColorRiesgo(nivel)} text-white px-4 py-2 rounded-full text-sm font-bold w-fit`}>
+      {nivel} - {score}/100
+    </span>
+  );
+}
+
+function obtenerColorRiesgo(nivel) {
+  if (nivel === 'ALTO') return 'bg-red-600';
+  if (nivel === 'MEDIO') return 'bg-yellow-500';
+
+  return 'bg-green-600';
+}
+
+function obtenerColorRiesgoScore(score) {
+  if (score >= 66) return 'bg-red-600';
+  if (score >= 31) return 'bg-yellow-500';
+
+  return 'bg-green-600';
 }
 
 const inputStyle = `

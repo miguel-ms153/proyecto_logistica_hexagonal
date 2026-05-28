@@ -4,6 +4,11 @@ import Sidebar from '../components/Sidebar';
 
 import API from '../services/api';
 
+import {
+  calcularScoreRiesgo,
+  estaVencido
+} from '../utils/riskScoring';
+
 const estadosOrden = [
   'Orden',
   'Productos',
@@ -195,6 +200,16 @@ function Trazabilidad() {
     const completados = timeline.filter((item) => item.completado).length;
     const alertas = timeline.filter((item) => item.alerta).length;
 
+    const riesgo =
+      calcularScoreRiesgo({
+        orden: ordenSeleccionada,
+        pagos,
+        embarques,
+        aduanas: aduanasOrden,
+        documentos: documentosOrden,
+        tracking: trackingOrden
+      });
+
     return {
       idOrden,
       usuario: ordenSeleccionada.usuario,
@@ -207,7 +222,8 @@ function Trazabilidad() {
       timeline,
       completados,
       alertas,
-      avance: Math.round((completados / timeline.length) * 100)
+      avance: Math.round((completados / timeline.length) * 100),
+      riesgo
     };
   }, [ordenSeleccionada, aduanas, documentos, tracking]);
 
@@ -272,7 +288,59 @@ function Trazabilidad() {
               <KPI titulo="Etapas completadas" valor={`${resumen.completados}/${estadosOrden.length}`} color="bg-green-600" />
               <KPI titulo="Alertas" valor={resumen.alertas} color="bg-red-600" />
               <KPI titulo="Documentos" valor={resumen.documentos.length} color="bg-blue-600" />
-              <KPI titulo="Tracking" valor={resumen.tracking.length} color="bg-slate-800" />
+              <KPI titulo="Riesgo IA" valor={`${resumen.riesgo.score}/100`} color={obtenerColorRiesgo(resumen.riesgo.nivel)} />
+            </div>
+
+            <div className="bg-slate-900 text-white rounded-2xl shadow p-6 mb-8">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                <div>
+                  <p className="text-slate-300 font-bold">
+                    Scoring avanzado de riesgo logistico
+                  </p>
+
+                  <h2 className="text-4xl font-bold mt-2">
+                    {resumen.riesgo.nivel} - {resumen.riesgo.score}/100
+                  </h2>
+
+                  <p className="text-slate-300 mt-3">
+                    {resumen.riesgo.recomendacion}
+                  </p>
+                </div>
+
+                <RiesgoBadge nivel={resumen.riesgo.nivel} />
+              </div>
+
+              <div className="mt-6">
+                <div className="w-full bg-slate-700 rounded-full h-4 overflow-hidden">
+                  <div
+                    className={`${obtenerColorRiesgo(resumen.riesgo.nivel)} h-4 rounded-full transition-all`}
+                    style={{ width: `${resumen.riesgo.score}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
+                {resumen.riesgo.factores.map((factor) => (
+                  <div
+                    key={factor.descripcion}
+                    className="bg-slate-800 rounded-xl p-4"
+                  >
+                    <p className="text-sm text-slate-400">
+                      +{factor.puntos} puntos
+                    </p>
+
+                    <p className="font-bold mt-1">
+                      {factor.descripcion}
+                    </p>
+                  </div>
+                ))}
+
+                {resumen.riesgo.factores.length === 0 && (
+                  <div className="bg-slate-800 rounded-xl p-4 font-bold">
+                    Sin factores criticos detectados.
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow p-6 mb-8">
@@ -482,25 +550,6 @@ function calcularCierre(orden, aduanas, documentos) {
   return 'Pendiente';
 }
 
-function estaVencido(documento) {
-  if (!documento.fecha_vencimiento) return false;
-
-  if (
-    documento.estado === 'Aprobado' ||
-    documento.estado === 'Recibido'
-  ) {
-    return false;
-  }
-
-  const hoy = new Date();
-  const vencimiento = new Date(documento.fecha_vencimiento);
-
-  hoy.setHours(0, 0, 0, 0);
-  vencimiento.setHours(0, 0, 0, 0);
-
-  return vencimiento < hoy;
-}
-
 function obtenerIdUsuarioOrden(orden) {
   return Number(
     orden?.id_usuario ||
@@ -518,6 +567,21 @@ function formatearFecha(fecha) {
     month: '2-digit',
     day: '2-digit'
   });
+}
+
+function RiesgoBadge({ nivel }) {
+  return (
+    <span className={`${obtenerColorRiesgo(nivel)} text-white px-5 py-3 rounded-full text-sm font-bold w-fit`}>
+      Riesgo {nivel}
+    </span>
+  );
+}
+
+function obtenerColorRiesgo(nivel) {
+  if (nivel === 'ALTO') return 'bg-red-600';
+  if (nivel === 'MEDIO') return 'bg-yellow-500';
+
+  return 'bg-green-600';
 }
 
 const inputStyle = `

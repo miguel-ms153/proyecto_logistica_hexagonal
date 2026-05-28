@@ -8,8 +8,6 @@ function predecirRiesgo(
   const ubicacion =
     tracking.ubicacion;
 
-  // IA SIMPLE
-
   if (
     estado === 'Retrasado'
   ) {
@@ -21,7 +19,12 @@ function predecirRiesgo(
       probabilidad:
         '90%',
 
-      color: 'red'
+      color: 'red',
+
+      score: 90,
+
+      recomendacion:
+        'Escalar con operador logistico y actualizar tracking'
 
     };
 
@@ -38,7 +41,12 @@ function predecirRiesgo(
       probabilidad:
         '60%',
 
-      color: 'orange'
+      color: 'orange',
+
+      score: 60,
+
+      recomendacion:
+        'Monitorear ruta y solicitar actualizacion de ubicacion'
 
     };
 
@@ -51,7 +59,12 @@ function predecirRiesgo(
     probabilidad:
       '15%',
 
-    color: 'green'
+    color: 'green',
+
+    score: 15,
+
+    recomendacion:
+      'Continuar seguimiento normal'
 
   };
 
