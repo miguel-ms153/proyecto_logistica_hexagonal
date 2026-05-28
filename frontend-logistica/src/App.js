@@ -32,6 +32,8 @@ import Reportes from './pages/Reportes';
 
 import Bitacora from './pages/Bitacora';
 
+import Notificaciones from './pages/Notificaciones';
+
 import Tracking from './pages/Tracking';
 
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -176,6 +178,16 @@ function App() {
           element={
             <ProtectedRoute>
               <Bitacora />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* NOTIFICACIONES */}
+        <Route
+          path="/notificaciones"
+          element={
+            <ProtectedRoute>
+              <Notificaciones />
             </ProtectedRoute>
           }
         />

@@ -301,6 +301,12 @@ function Sidebar() {
                   icon={<FaFileAlt />}
                   text="Reportes"
                 />
+
+                <MenuItem
+                  to="/notificaciones"
+                  icon={<FaBell />}
+                  text="Notificaciones"
+                />
               </>
             )
           }
