@@ -8,6 +8,8 @@ import Login from './pages/Login';
 
 import Dashboard from './pages/Dashboard';
 
+import PanelCliente from './pages/PanelCliente';
+
 import Usuarios from './pages/Usuarios';
 
 import Productos from './pages/Productos';
@@ -58,6 +60,16 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* PANEL CLIENTE */}
+        <Route
+          path="/mi-panel"
+          element={
+            <ProtectedRoute>
+              <PanelCliente />
             </ProtectedRoute>
           }
         />

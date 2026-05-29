@@ -357,22 +357,23 @@ function Ordenes() {
   const columns = [
     {
       name: 'ID',
-      width: '90px',
+      width: '58px',
       selector: (row) => row.id_orden,
       sortable: true
     },
     {
       name: 'Usuario',
-      minWidth: '230px',
+      width: '160px',
+      grow: 2,
       selector: (row) => row.usuario?.nombre || row.id_usuario || 'N/A',
       sortable: true,
       cell: (row) => (
-        <div>
-          <p className="font-bold text-slate-800">
+        <div className="min-w-0">
+          <p className="font-bold text-slate-800 text-sm truncate" title={row.usuario?.nombre || 'N/A'}>
             {row.usuario?.nombre || 'N/A'}
           </p>
 
-          <p className="text-sm text-gray-500">
+          <p className="text-[11px] text-gray-500 truncate">
             {row.usuario?.rol || (row.id_usuario ? `#${row.id_usuario}` : 'Sin usuario')}
           </p>
         </div>
@@ -380,21 +381,21 @@ function Ordenes() {
     },
     {
       name: 'Estado',
-      width: '170px',
+      width: '118px',
       selector: (row) => row.estado || 'Pendiente',
       sortable: true,
       cell: (row) => <EstadoBadge estado={row.estado || 'Pendiente'} />
     },
     {
       name: 'Embarque',
-      width: '180px',
+      width: '126px',
       selector: (row) => obtenerEstadoEmbarque(row),
       sortable: true,
       cell: (row) => <EmbarqueBadge estado={obtenerEstadoEmbarque(row)} />
     },
     {
       name: 'Productos',
-      width: '130px',
+      width: '82px',
       selector: (row) => row.productos?.length || 0,
       sortable: true,
       cell: (row) => (
@@ -405,7 +406,7 @@ function Ordenes() {
     },
     {
       name: 'Pagos',
-      width: '120px',
+      width: '70px',
       selector: (row) => row.pagos?.length || 0,
       sortable: true,
       cell: (row) => (
@@ -415,8 +416,8 @@ function Ordenes() {
       )
     },
     {
-      name: 'Total Pagado',
-      width: '160px',
+      name: 'Total',
+      width: '120px',
       selector: (row) => calcularTotalOrden(row),
       sortable: true,
       cell: (row) => (
@@ -427,20 +428,20 @@ function Ordenes() {
     },
     {
       name: 'Fecha',
-      width: '150px',
+      width: '104px',
       selector: (row) => row.fecha || 'N/A',
       sortable: true,
       cell: (row) => <span>{formatearFecha(row.fecha)}</span>
     },
     {
       name: 'Acciones',
-      width: '240px',
+      width: esCliente ? '82px' : '148px',
       cell: (row) => (
-        <div className="flex gap-3 w-full justify-center">
+        <div className="flex gap-1.5 w-full justify-end">
           <button
             type="button"
             onClick={() => editarOrden(row)}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white min-w-[90px] px-4 py-3 rounded-xl font-semibold whitespace-nowrap"
+            className="bg-yellow-500 hover:bg-yellow-600 text-white min-w-[62px] px-2.5 py-1.5 rounded-lg font-bold whitespace-nowrap text-xs"
           >
             Editar
           </button>
@@ -452,12 +453,13 @@ function Ordenes() {
               bg-red-600
               hover:bg-red-700
               text-white
-              min-w-[105px]
-              px-4
-              py-3
-              rounded-xl
-              font-semibold
+              min-w-[72px]
+              px-2.5
+              py-1.5
+              rounded-lg
+              font-bold
               whitespace-nowrap
+              text-xs
               ${esCliente ? 'hidden' : ''}
             `}
           >
@@ -467,6 +469,36 @@ function Ordenes() {
       )
     }
   ];
+
+  const customStyles = {
+    headRow: {
+      style: {
+        backgroundColor: '#0f172a',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '12px',
+        minHeight: '42px'
+      }
+    },
+    rows: {
+      style: {
+        minHeight: '48px',
+        fontSize: '12px'
+      }
+    },
+    cells: {
+      style: {
+        paddingLeft: '10px',
+        paddingRight: '10px'
+      }
+    },
+    headCells: {
+      style: {
+        paddingLeft: '10px',
+        paddingRight: '10px'
+      }
+    }
+  };
 
   return (
     <PageLayout>
@@ -589,6 +621,9 @@ function Ordenes() {
         columns={columns}
         data={filtrados}
         noData="No hay ordenes registradas"
+        customStyles={customStyles}
+        selectableRows={false}
+        dense
       />
     </PageLayout>
   );
@@ -715,7 +750,7 @@ function EstadoBadge({ estado }) {
     <StatusBadge
       text={estado}
       color={color}
-      minWidth="min-w-[120px]"
+      minWidth="min-w-[96px]"
     />
   );
 }
@@ -737,7 +772,7 @@ function EmbarqueBadge({ estado }) {
     <StatusBadge
       text={estado}
       color={color}
-      minWidth="min-w-[130px]"
+      minWidth="min-w-[108px]"
     />
   );
 }

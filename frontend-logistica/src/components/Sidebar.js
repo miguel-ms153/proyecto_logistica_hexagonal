@@ -16,7 +16,8 @@ import {
   FaFolderOpen,
   FaRoute,
   FaFileAlt,
-  FaHistory
+  FaHistory,
+  FaUserCircle
 } from 'react-icons/fa';
 
 import {
@@ -234,6 +235,17 @@ function Sidebar() {
         {/* MENU POR ROLES */}
 
         <nav className="space-y-1.5">
+
+          {/* SOLO CLIENTE */}
+          {
+            rol === 'CLIENTE' && (
+              <MenuItem
+                to="/mi-panel"
+                icon={<FaUserCircle />}
+                text="Mi Panel"
+              />
+            )
+          }
 
           {/* ADMIN Y OPERADOR */}
           {
