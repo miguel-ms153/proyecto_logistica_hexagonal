@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import API from '../services/api';
 
@@ -14,6 +14,17 @@ import SectionCard from '../components/common/SectionCard';
 import StatusBadge from '../components/common/StatusBadge';
 
 function Ordenes() {
+  const usuarioActual = useMemo(
+    () => JSON.parse(localStorage.getItem('usuario')) || {},
+    []
+  );
+
+  const idUsuarioActual =
+    Number(usuarioActual?.id_usuario || usuarioActual?.id);
+
+  const esCliente =
+    usuarioActual?.rol === 'CLIENTE';
+
   const [ordenes, setOrdenes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -75,12 +86,32 @@ function Ordenes() {
 
   useEffect(() => {
     obtenerOrdenes();
-    obtenerUsuarios();
+
+    if (esCliente) {
+      setUsuarios([
+        {
+          id_usuario: idUsuarioActual,
+          nombre: usuarioActual?.nombre,
+          email: usuarioActual?.email,
+          rol: usuarioActual?.rol
+        }
+      ]);
+      setIdUsuario(String(idUsuarioActual || ''));
+    } else {
+      obtenerUsuarios();
+    }
+
     obtenerProductos();
-  }, []);
+  }, [
+    esCliente,
+    idUsuarioActual,
+    usuarioActual?.email,
+    usuarioActual?.nombre,
+    usuarioActual?.rol
+  ]);
 
   const limpiarFormulario = () => {
-    setIdUsuario('');
+    setIdUsuario(esCliente ? String(idUsuarioActual || '') : '');
     setEstado('Pendiente');
     setFecha('');
     setIdProducto('');
@@ -100,7 +131,11 @@ function Ordenes() {
     const data = {
       estado,
       fecha,
-      id_usuario: idUsuario ? Number(idUsuario) : null
+      id_usuario: esCliente
+        ? idUsuarioActual
+        : idUsuario
+          ? Number(idUsuario)
+          : null
     };
 
     try {
@@ -129,9 +164,14 @@ function Ordenes() {
   };
 
   const editarOrden = async (orden) => {
+    if (esCliente && obtenerIdUsuarioOrden(orden) !== idUsuarioActual) {
+      setError('No puedes editar ordenes de otros clientes');
+      return;
+    }
+
     setEditando(true);
     setOrdenEditando(orden);
-    setIdUsuario(orden.id_usuario || '');
+    setIdUsuario(esCliente ? String(idUsuarioActual || '') : orden.id_usuario || '');
     setEstado(orden.estado || 'Pendiente');
     setFecha(orden.fecha?.split('T')[0] || orden.fecha || '');
     setError('');
@@ -145,6 +185,11 @@ function Ordenes() {
   };
 
   const eliminarOrden = async (id) => {
+    if (esCliente) {
+      setError('Los clientes no pueden eliminar ordenes');
+      return;
+    }
+
     const confirmar = window.confirm('Seguro que deseas eliminar esta orden?');
 
     if (!confirmar) return;
@@ -257,7 +302,13 @@ function Ordenes() {
     return orden.embarques[0].estado || 'Sin estado';
   };
 
-  const filtrados = ordenes.filter((orden) => {
+  const ordenesVisibles = ordenes.filter((orden) => {
+    if (!esCliente) return true;
+
+    return obtenerIdUsuarioOrden(orden) === idUsuarioActual;
+  });
+
+  const filtrados = ordenesVisibles.filter((orden) => {
     const texto = busqueda.toLowerCase();
 
     return (
@@ -270,22 +321,22 @@ function Ordenes() {
     );
   });
 
-  const pendientes = ordenes.filter(
+  const pendientes = ordenesVisibles.filter(
     (orden) => orden.estado === 'Pendiente'
   ).length;
 
-  const proceso = ordenes.filter(
+  const proceso = ordenesVisibles.filter(
     (orden) =>
       orden.estado === 'En proceso' ||
       orden.estado === 'En transito' ||
       orden.estado === 'En tránsito'
   ).length;
 
-  const entregadas = ordenes.filter(
+  const entregadas = ordenesVisibles.filter(
     (orden) => orden.estado === 'Entregada'
   ).length;
 
-  const valorTotal = ordenes.reduce(
+  const valorTotal = ordenesVisibles.reduce(
     (acc, orden) => acc + calcularTotalOrden(orden),
     0
   );
@@ -397,7 +448,18 @@ function Ordenes() {
           <button
             type="button"
             onClick={() => eliminarOrden(row.id_orden)}
-            className="bg-red-600 hover:bg-red-700 text-white min-w-[105px] px-4 py-3 rounded-xl font-semibold whitespace-nowrap"
+            className={`
+              bg-red-600
+              hover:bg-red-700
+              text-white
+              min-w-[105px]
+              px-4
+              py-3
+              rounded-xl
+              font-semibold
+              whitespace-nowrap
+              ${esCliente ? 'hidden' : ''}
+            `}
           >
             Eliminar
           </button>
@@ -409,9 +471,13 @@ function Ordenes() {
   return (
     <PageLayout>
       <PageHeader
-        title="Gestion de Ordenes"
-        subtitle="Control logistico empresarial"
-        badge={`Total: ${ordenes.length}`}
+        title={esCliente ? 'Mis Ordenes' : 'Gestion de Ordenes'}
+        subtitle={
+          esCliente
+            ? 'Consulta y gestiona tus operaciones logisticas'
+            : 'Control logistico empresarial'
+        }
+        badge={`Total: ${ordenesVisibles.length}`}
       />
 
       <KpiGrid
@@ -438,22 +504,34 @@ function Ordenes() {
         <AlertMessage message={error} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <select
-            value={idUsuario}
-            onChange={(e) => setIdUsuario(e.target.value)}
-            className={inputStyle}
-          >
-            <option value="">Seleccionar usuario</option>
+          {esCliente ? (
+            <div className="bg-slate-100 border border-slate-200 rounded-xl p-4">
+              <p className="text-sm text-gray-500 font-bold">
+                Cliente
+              </p>
 
-            {usuarios.map((usuario) => (
-              <option
-                key={usuario.id_usuario}
-                value={usuario.id_usuario}
-              >
-                {usuario.nombre} - {usuario.rol}
-              </option>
-            ))}
-          </select>
+              <p className="font-bold text-slate-800 mt-1">
+                {usuarioActual?.nombre || 'Usuario actual'}
+              </p>
+            </div>
+          ) : (
+            <select
+              value={idUsuario}
+              onChange={(e) => setIdUsuario(e.target.value)}
+              className={inputStyle}
+            >
+              <option value="">Seleccionar usuario</option>
+
+              {usuarios.map((usuario) => (
+                <option
+                  key={usuario.id_usuario}
+                  value={usuario.id_usuario}
+                >
+                  {usuario.nombre} - {usuario.rol}
+                </option>
+              ))}
+            </select>
+          )}
 
           <select
             value={estado}
@@ -513,6 +591,15 @@ function Ordenes() {
         noData="No hay ordenes registradas"
       />
     </PageLayout>
+  );
+}
+
+function obtenerIdUsuarioOrden(orden) {
+  return Number(
+    orden?.id_usuario ||
+      orden?.usuario?.id_usuario ||
+      orden?.usuario?.id ||
+      0
   );
 }
 
